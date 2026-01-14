@@ -23,6 +23,14 @@ android {
             }
         }
 
+        externalNativeBuild {
+            cmake {
+                // 告诉链接器使用 16 KB 对齐
+                arguments "-DANDROID_ALIGNED_16K=ON"
+                cppFlags "-Wl,-z,max-page-size=16384"
+            }
+        }
+
     }
 
     splits {

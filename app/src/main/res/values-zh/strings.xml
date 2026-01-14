@@ -245,6 +245,7 @@
     <string name="menu_sort_year">年份</string>
     <string name="menu_unpin_button">从主页移除</string>
     <string name="player_lyrics_download_content_description">下载离线歌词</string>
+    <string name="player_lyrics_sync_content_description">同步歌词位置</string>
     <string name="player_lyrics_download_failure">暂无歌词可供下载。</string>
     <string name="player_lyrics_download_success">离线歌词已保存。</string>
     <string name="player_lyrics_downloaded_content_description">已下载的离线歌词</string>

@@ -321,7 +321,7 @@ public class PlayerLyricsFragment extends Fragment {
 
     @NonNull
     private List<Line> getCurerntLyricsLine(List<Line> lines, StringBuilder lyricsBuilder, int timestamp){
-        lyricsBuilder.setLength(0);
+        lyricsBuilder.append("\n\n\n");
         int currentLineStart = 0;
         int firstIndex = 0, lastIndex = 0;
         for (int i = 0; i < lines.size(); i++) {
@@ -341,6 +341,8 @@ public class PlayerLyricsFragment extends Fragment {
                 lastIndex = i;
             }
         }
+
+        lyricsBuilder.append("\n\n\n\n\n"); // 额外追加一些换行，避免歌词末尾贴底。
         if (lastIndex == 0){
             if (firstIndex > 0){
                 lastIndex = lines.size();
@@ -352,7 +354,7 @@ public class PlayerLyricsFragment extends Fragment {
     }
 
     private int getStartPosition(List<Line> lines, Line toHighlight) {
-        int start = 0;
+        int start = 3;
 
         for (Line line : lines) {
             if (line != toHighlight) {

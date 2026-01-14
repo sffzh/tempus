@@ -10,7 +10,7 @@
         android:layout_width="wrap_content"
         android:layout_height="wrap_content"
         android:orientation="vertical"
-        app:layout_constraintGuide_percent="0.45" />
+        app:layout_constraintGuide_percent="0.59" />
 
     <androidx.constraintlayout.widget.ConstraintLayout
         android:id="@+id/player_media_quality_sector"
@@ -66,14 +66,16 @@
 
     <androidx.viewpager2.widget.ViewPager2
         android:id="@+id/player_media_cover_view_pager"
-        android:layout_width="0dp"
-        android:layout_height="0dp"
+        android:layout_width="412dp"
+        android:layout_height="436dp"
         android:layout_margin="12dp"
         android:clipToPadding="false"
         app:layout_constraintBottom_toBottomOf="parent"
         app:layout_constraintEnd_toStartOf="@+id/vertical_guideline"
+        app:layout_constraintHorizontal_bias="0.8"
         app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintTop_toTopOf="parent" />
+        app:layout_constraintTop_toTopOf="parent"
+        app:layout_constraintVertical_bias="0.521" />
 
     <LinearLayout
         android:id="@+id/rating_container"
