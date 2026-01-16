@@ -8,6 +8,7 @@ import android.net.NetworkInfo;
 import android.net.Uri;
 import android.os.Bundle;
 import android.os.Handler;
+import android.os.Looper;
 import android.text.TextUtils;
 import android.util.Log;
 import android.view.View;
@@ -21,6 +22,7 @@ import androidx.media3.common.MediaMetadata;
 import androidx.media3.common.Player;
 import androidx.media3.common.MimeTypes;
 import androidx.media3.common.util.UnstableApi;
+import androidx.media3.session.MediaBrowser;
 import androidx.navigation.NavController;
 import androidx.navigation.fragment.NavHostFragment;
 import androidx.navigation.ui.NavigationUI;
@@ -275,14 +277,31 @@ public class MainActivity extends BaseActivity {
 
         getMediaBrowserListenableFuture().addListener(() -> {
             try {
-                getMediaBrowserListenableFuture().get().addListener(new Player.Listener() {
-                    @Override
-                    public void onIsPlayingChanged(boolean isPlaying) {
-                        if (isPlaying && bottomSheetBehavior.getState() == BottomSheetBehavior.STATE_HIDDEN) {
-                            setBottomSheetInPeek(true);
+                // 获取 MediaBrowser 实例
+                MediaBrowser browser = getMediaBrowserListenableFuture().get();
+                // --- 新增：启动 7 秒后自动播放逻辑 ---
+                if (browser != null) {
+                    new Handler(Looper.getMainLooper()).postDelayed(() -> {
+                        // 检查浏览器是否仍然连接，并且当前没有在播放
+                        if (browser.isConnected()) {
+                            // 如果队列中有媒体项目，则开始播放
+                            if (browser.getMediaItemCount() > 0) {
+                                browser.play();
+                            }
                         }
-                    }
-                });
+                    }, 7000); // 7000 毫秒 = 7 秒
+
+                    browser.addListener(new Player.Listener() {
+                        @Override
+                        public void onIsPlayingChanged(boolean isPlaying) {
+                            if (isPlaying && bottomSheetBehavior.getState() == BottomSheetBehavior.STATE_HIDDEN) {
+                                setBottomSheetInPeek(true);
+                            }
+                        }
+                    });
+                }
+
+
             } catch (ExecutionException | InterruptedException e) {
                 e.printStackTrace();
             }

@@ -31,6 +31,18 @@
         app:layout_constraintStart_toStartOf="parent"
         app:layout_constraintTop_toBottomOf="@+id/empty_description_image_view" />
 
+    <com.cappielloantonio.tempo.ui.fragment.view.LyricView
+        android:id="@+id/lyricView"
+        android:layout_width="0dp"
+        android:layout_height="0dp"
+        android:visibility="visible"
+        app:layout_constraintBottom_toBottomOf="parent"
+        app:layout_constraintEnd_toEndOf="parent"
+        app:layout_constraintStart_toStartOf="parent"
+        app:layout_constraintTop_toTopOf="parent"
+        android:background="?attr/colorSurface"/>
+
+
     <androidx.core.widget.NestedScrollView
         android:id="@+id/now_playing_song_lyrics_sroll_view"
         android:layout_width="0dp"
@@ -43,8 +55,12 @@
         <TextView
             android:id="@+id/now_playing_song_lyrics_text_view"
             style="@style/BodyLarge"
+            android:fontFamily="@font/you_yuan"
             android:layout_width="match_parent"
             android:layout_height="match_parent"
+            android:gravity="center_horizontal"
+            android:textAlignment="center"
+            android:lineSpacingMultiplier="1.8"
             app:layout_constraintEnd_toEndOf="parent"
             app:layout_constraintStart_toStartOf="parent"
             app:layout_constraintTop_toTopOf="parent" />
@@ -65,8 +81,8 @@
         android:visibility="gone"
         app:cornerRadius="64dp"
         app:icon="@drawable/ic_download"
-        app:layout_constraintTop_toTopOf="@+id/now_playing_song_lyrics_sroll_view"
-        app:layout_constraintEnd_toEndOf="@+id/now_playing_song_lyrics_sroll_view" />
+        app:layout_constraintTop_toTopOf="@+id/lyricView"
+        app:layout_constraintEnd_toEndOf="@+id/lyricView" />
 
     <com.google.android.material.button.MaterialButton
         android:id="@+id/sync_lyrics_tap_button"
@@ -82,8 +98,8 @@
         android:alpha="0.4"
         android:visibility="visible"
         app:icon="@drawable/ic_lyrics_sync_lock"
-        app:layout_constraintEnd_toEndOf="@+id/now_playing_song_lyrics_sroll_view"
-        app:layout_constraintBottom_toBottomOf="@+id/now_playing_song_lyrics_sroll_view" />
+        app:layout_constraintEnd_toEndOf="@+id/lyricView"
+        app:layout_constraintBottom_toBottomOf="@+id/lyricView" />
 
     <TextView
         android:id="@+id/temp_lyrics_line_text_view"

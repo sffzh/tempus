@@ -16,8 +16,8 @@ android {
         minSdkVersion 24
         targetSdk 35
 
-        versionCode 13
-        versionName '4.6.4'
+        versionCode 26011601
+        versionName '4.6.4.26011601'
         testInstrumentationRunner 'androidx.test.runner.AndroidJUnitRunner'
 
         javaCompileOptions {
@@ -61,12 +61,12 @@ android {
     productFlavors {
         tempus {
             dimension = "default"
-            applicationId 'com.eddyizm.tempus'
+            applicationId 'cn.sffzh.tempus'
         }
 
         degoogled {
             dimension = "default"
-            applicationId "com.eddyizm.degoogled.tempus"
+            applicationId "cn.sffzh.degoogled.tempus"
         }
 
     }
@@ -74,7 +74,7 @@ android {
     // 1. 定义签名配置
     signingConfigs {
         release {
-            storeFile file("props['RELEASE_KEY_STORE_FILE']") // 签名文件路径
+            storeFile file(props['RELEASE_KEY_STORE_FILE']) // 签名文件路径
             storePassword props['RELEASE_STORE_PASSWORD']
             keyAlias props['RELEASE_KEY_ALIAS']
             keyPassword props['RELEASE_KEY_PASSWORD']
@@ -117,7 +117,7 @@ android {
 }
 
 dependencies {
-    implementation files('../libs/lib-decoder-ffmpeg-release.aar')
+//    implementation files('../libs/lib-decoder-ffmpeg-release.aar')
 
     // AndroidX
     implementation 'androidx.constraintlayout:constraintlayout:2.2.0'

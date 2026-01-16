@@ -209,10 +209,10 @@
         android:layout_width="32dp"
         android:layout_height="32dp"
         android:layout_marginStart="24dp"
-        app:layout_constraintBottom_toBottomOf="@+id/placeholder_view_middle_left"
+        app:layout_constraintBottom_toBottomOf="@+id/player_play_pause_placeholder_view"
         app:layout_constraintEnd_toStartOf="@+id/placeholder_view_middle_left"
         app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintTop_toTopOf="@+id/placeholder_view_middle_left" />
+        app:layout_constraintTop_toTopOf="@+id/player_play_pause_placeholder_view" />
 
     <View
         android:id="@+id/placeholder_view_middle_left"
@@ -248,10 +248,10 @@
         android:layout_width="32dp"
         android:layout_height="32dp"
         android:layout_marginEnd="24dp"
-        app:layout_constraintBottom_toBottomOf="@+id/placeholder_view_middle_right"
+        app:layout_constraintBottom_toBottomOf="@+id/player_play_pause_placeholder_view"
         app:layout_constraintEnd_toEndOf="parent"
         app:layout_constraintStart_toEndOf="@+id/placeholder_view_middle_right"
-        app:layout_constraintTop_toTopOf="@+id/placeholder_view_middle_right" />
+        app:layout_constraintTop_toTopOf="@+id/player_play_pause_placeholder_view" />
 
     <Button
         android:id="@+id/player_playback_speed_button"
@@ -274,13 +274,12 @@
         android:id="@+id/exo_shuffle"
         android:layout_width="32dp"
         android:layout_height="32dp"
-        android:layout_marginStart="24dp"
         android:background="?attr/selectableItemBackgroundBorderless"
         android:scaleType="fitCenter"
-        app:layout_constraintBottom_toBottomOf="@+id/placeholder_view_middle_left"
-        app:layout_constraintEnd_toStartOf="@+id/placeholder_view_middle_left"
-        app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintTop_toTopOf="@+id/placeholder_view_middle_left"
+        app:layout_constraintBottom_toBottomOf="@+id/placeholder_view_left"
+        app:layout_constraintEnd_toEndOf="@+id/placeholder_view_left"
+        app:layout_constraintStart_toStartOf="@+id/placeholder_view_left"
+        app:layout_constraintTop_toTopOf="@+id/placeholder_view_left"
         app:srcCompat="@drawable/ic_shuffle"
         app:tint="?attr/colorOnPrimaryContainer" />
 
@@ -291,10 +290,10 @@
         android:background="?attr/selectableItemBackgroundBorderless"
         android:scaleType="fitCenter"
         android:src="@drawable/ic_replay"
-        app:layout_constraintBottom_toBottomOf="@+id/player_play_pause_placeholder_view"
-        app:layout_constraintEnd_toStartOf="@+id/player_play_pause_placeholder_view"
-        app:layout_constraintStart_toEndOf="@id/placeholder_view_left"
-        app:layout_constraintTop_toTopOf="@+id/player_play_pause_placeholder_view"
+        app:layout_constraintBottom_toBottomOf="@+id/placeholder_view_middle_right"
+        app:layout_constraintEnd_toEndOf="@+id/placeholder_view_middle_right"
+        app:layout_constraintStart_toStartOf="@+id/placeholder_view_middle_right"
+        app:layout_constraintTop_toTopOf="@+id/placeholder_view_middle_right"
         app:tint="?attr/colorOnPrimaryContainer" />
 
     <ImageButton
@@ -303,10 +302,10 @@
         android:layout_height="42dp"
         android:background="?attr/selectableItemBackgroundBorderless"
         android:scaleType="fitCenter"
-        app:layout_constraintBottom_toBottomOf="@+id/player_play_pause_placeholder_view"
-        app:layout_constraintEnd_toStartOf="@+id/player_play_pause_placeholder_view"
-        app:layout_constraintStart_toEndOf="@id/placeholder_view_left"
-        app:layout_constraintTop_toTopOf="@+id/player_play_pause_placeholder_view"
+        app:layout_constraintBottom_toBottomOf="@+id/placeholder_view_middle_left"
+        app:layout_constraintEnd_toEndOf="@+id/placeholder_view_middle_left"
+        app:layout_constraintStart_toStartOf="@+id/placeholder_view_middle_left"
+        app:layout_constraintTop_toTopOf="@+id/placeholder_view_middle_left"
         app:srcCompat="@drawable/ic_skip_previous"
         app:tint="?attr/colorOnPrimaryContainer" />
 
@@ -316,11 +315,10 @@
         android:layout_width="80dp"
         android:layout_height="80dp"
         android:layout_marginTop="0dp"
-        app:layout_constraintBottom_toTopOf="@+id/player_quick_action_view"
-        app:layout_constraintEnd_toEndOf="parent"
-        app:layout_constraintStart_toStartOf="parent"
-        app:layout_constraintTop_toBottomOf="@+id/exo_progress"
-        app:layout_constraintVertical_bias=".45"
+        app:layout_constraintBottom_toBottomOf="@+id/player_play_pause_placeholder_view"
+        app:layout_constraintEnd_toEndOf="@+id/player_play_pause_placeholder_view"
+        app:layout_constraintStart_toStartOf="@id/player_play_pause_placeholder_view"
+        app:layout_constraintTop_toTopOf="@+id/player_play_pause_placeholder_view"
         app:tint="?attr/colorOnPrimaryContainer" />
 
     <ImageButton
@@ -329,10 +327,10 @@
         android:layout_height="42dp"
         android:background="?attr/selectableItemBackgroundBorderless"
         android:scaleType="fitCenter"
-        app:layout_constraintBottom_toBottomOf="@+id/player_play_pause_placeholder_view"
-        app:layout_constraintEnd_toStartOf="@id/placeholder_view_right"
-        app:layout_constraintStart_toEndOf="@+id/player_play_pause_placeholder_view"
-        app:layout_constraintTop_toTopOf="@+id/player_play_pause_placeholder_view"
+        app:layout_constraintBottom_toBottomOf="@+id/placeholder_view_middle_right"
+        app:layout_constraintEnd_toEndOf="@id/placeholder_view_middle_right"
+        app:layout_constraintStart_toStartOf="@+id/placeholder_view_middle_right"
+        app:layout_constraintTop_toTopOf="@+id/placeholder_view_middle_right"
         app:srcCompat="@drawable/ic_skip_next"
         app:tint="?attr/colorOnPrimaryContainer" />
 
@@ -353,13 +351,12 @@
         android:id="@+id/exo_repeat_toggle"
         android:layout_width="32dp"
         android:layout_height="32dp"
-        android:layout_marginEnd="24dp"
         android:background="?attr/selectableItemBackgroundBorderless"
         android:scaleType="fitCenter"
-        app:layout_constraintBottom_toBottomOf="@+id/placeholder_view_middle_right"
-        app:layout_constraintEnd_toEndOf="parent"
-        app:layout_constraintStart_toEndOf="@+id/placeholder_view_middle_right"
-        app:layout_constraintTop_toTopOf="@+id/placeholder_view_middle_right"
+        app:layout_constraintBottom_toBottomOf="@+id/placeholder_view_right"
+        app:layout_constraintEnd_toEndOf="@+id/placeholder_view_right"
+        app:layout_constraintStart_toStartOf="@+id/placeholder_view_right"
+        app:layout_constraintTop_toTopOf="@+id/placeholder_view_right"
         app:srcCompat="@drawable/ic_repeat"
         app:tint="?attr/colorOnPrimaryContainer" />
 
