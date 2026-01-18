@@ -85,7 +85,7 @@ open class BaseMediaService : MediaLibraryService() {
         val n = player.mediaItemCount
         val k = player.currentMediaItemIndex
         val current = player.currentPosition
-        val items = (0..n - 1).map { MappingUtil.mapMediaItem(player.getMediaItemAt(it)) }
+        val items = (0 until n).map { MappingUtil.mapMediaItem(player.getMediaItemAt(it)) }
         player.clearMediaItems()
         player.setMediaItems(items, k, current)
     }

@@ -84,6 +84,18 @@ object Preferences {
     private const val SORT_SEARCH_CHRONOLOGICALLY= "sort_search_chronologically"
     private const val ARTIST_DISPLAY_BIOGRAPHY= "artist_display_biography"
 
+    private const val FIRST_LAUNCH = "first_launch"
+
+    @JvmStatic
+    fun isFirstLaunch(): Boolean {
+        return App.getInstance().preferences.getBoolean(FIRST_LAUNCH, true)
+    }
+
+    @JvmStatic
+    fun setFirstLaunch(value: Boolean) {
+        App.getInstance().preferences.edit().putBoolean(FIRST_LAUNCH, value).apply()
+    }
+
     @JvmStatic
     fun getServer(): String? {
         return App.getInstance().preferences.getString(SERVER, null)

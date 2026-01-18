@@ -1,24 +1,24 @@
 package com.cappielloantonio.tempo.ui.fragment.view
-import android.R
+import android.animation.ValueAnimator
 import android.content.Context
 import android.content.res.Configuration
 import android.graphics.Canvas
 import android.graphics.Color
 import android.graphics.LinearGradient
 import android.graphics.Paint
-import android.graphics.PorterDuff
-import android.graphics.PorterDuffXfermode
 import android.graphics.Shader
 import android.graphics.drawable.ColorDrawable
 import android.graphics.drawable.GradientDrawable
 import android.text.StaticLayout
 import android.text.TextPaint
 import android.util.AttributeSet
+import android.util.Log
 import android.util.TypedValue
 import android.view.MotionEvent
 import android.view.View
+import android.view.animation.DecelerateInterpolator
+import androidx.core.graphics.withTranslation
 import com.cappielloantonio.tempo.ui.fragment.model.BilingualLine
-import com.google.android.material.color.MaterialColors
 import kotlin.math.max
 import kotlin.math.min
 
@@ -27,6 +27,7 @@ class LyricView @JvmOverloads constructor(
     attrs: AttributeSet? = null,
     defStyleAttr: Int = 0
 ) : View(context, attrs, defStyleAttr) {
+    val TAG: String = "LyricView"
 
     // 歌词数据
     private var lyrics: List<BilingualLine> = emptyList()
@@ -48,26 +49,26 @@ class LyricView @JvmOverloads constructor(
 
     private val normalPaint = TextPaint(Paint.ANTI_ALIAS_FLAG).apply {
         color = themeColor(com.google.android.material.R.attr.colorOnSurfaceVariant)
-        textSize = sp(18f)
+        textSize = sp(20f)
         textAlign = Paint.Align.CENTER
     }
 
     private val highlightPaint = TextPaint(Paint.ANTI_ALIAS_FLAG).apply {
         color = themeColor(com.google.android.material.R.attr.colorOnBackground)
-        textSize = sp(22f)
+        textSize = sp(20f)
         textAlign = Paint.Align.CENTER
         isFakeBoldText = true
     }
 
     private val secondaryPaint = TextPaint(Paint.ANTI_ALIAS_FLAG).apply {
         color = themeColor(com.google.android.material.R.attr.colorOnSurfaceVariant) // 更淡
-        textSize = sp(16f)
+        textSize = sp(18f)
         textAlign = Paint.Align.CENTER
     }
 
     private val secondaryHightlightPaint = TextPaint(Paint.ANTI_ALIAS_FLAG).apply {
         color = themeColor(com.google.android.material.R.attr.colorOnBackground) // 更淡
-        textSize = sp(16f)
+        textSize = sp(18f)
         textAlign = Paint.Align.CENTER
     }
 
@@ -116,6 +117,7 @@ class LyricView @JvmOverloads constructor(
             // 重新构建 layouts，复用 setLyrics 的逻辑
             setLyrics(lyrics)
         }
+//        lyricOffsetNeedFix = true
     }
 
     fun setLyrics(list: List<BilingualLine>) {
@@ -188,55 +190,71 @@ class LyricView @JvmOverloads constructor(
         onLineClickListener = listener
     }
 
-    private fun lerpColor(startColor: Int, endColor: Int, t: Float): Int {
-        val sA = (startColor shr 24) and 0xff
-        val sR = (startColor shr 16) and 0xff
-        val sG = (startColor shr 8) and 0xff
-        val sB = startColor and 0xff
-
-        val eA = (endColor shr 24) and 0xff
-        val eR = (endColor shr 16) and 0xff
-        val eG = (endColor shr 8) and 0xff
-        val eB = endColor and 0xff
-
-        val a = (sA + ((eA - sA) * t)).toInt()
-        val r = (sR + ((eR - sR) * t)).toInt()
-        val g = (sG + ((eG - sG) * t)).toInt()
-        val b = (sB + ((eB - sB) * t)).toInt()
-
-        return (a shl 24) or (r shl 16) or (g shl 8) or b
-    }
-
     private val maxScale = 1.15f
+    private var scrollAnimator: ValueAnimator? = null
+
+    // 当前行放大进度（0~1）
+    private var highlightProgress = 0f
+
+    // 上一行缩小进度（0~1）
+    private var prevHighlightProgress = 0f
+
+    // 上一行 index
+    private var previousLineIndex = -1
+
+    // 动画参数
+    var scrollDuration = 150L
+
+    var lyricOffsetNeedFix = true
 
     /**
      * 外部播放器定期调用，positionMs 为当前播放进度（毫秒）
      */
     fun setProgress(positionMs: Long) {
+        Log.d(TAG, "start setProgress! positionMs:{$positionMs}")
         if (lyrics.isEmpty() || layouts.isEmpty()) return
 
         val index = findCurrentLineIndex(positionMs)
+        val needMove = if (index == currentLineIndex) {
+            false
+        }else{
+            previousLineIndex = currentLineIndex
+            true
+        }
         currentLineIndex = index
 
-        val current = lyrics[index]
-        val next = lyrics.getOrNull(index + 1)
+        val toOffset = cumulativeHeights[index]
 
-        val start = current.timeMs
-        val end = next?.timeMs ?: (start + 4000)
-        val duration = max(1L, end - start)
+        if (!lyricOffsetNeedFix && (highlightProgress != 1f || !needMove)){
+            // 有其他动画进程正在运行，本次不运行动画
+            // 未进入下一行，不需要运行动画
+            return
+        }
+        lyricOffsetNeedFix = false
 
-        val progress = ((positionMs - start).toFloat() / duration).coerceIn(0f, 1f)
+        val startOffset = currentOffsetY
 
-        // ★ 新增：高亮动画进度
-        highlightProgress = progress
+        if (startOffset == toOffset.toFloat()){
+//            需要渲染画面，但不需要动画
+            invalidate()
+        }else{
+            scrollAnimator?.cancel()
+            scrollAnimator = ValueAnimator.ofFloat(startOffset, toOffset.toFloat()).apply {
+                duration = scrollDuration  // 你可以调成 80~150ms
+                interpolator = DecelerateInterpolator()
+                addUpdateListener {
+                    currentOffsetY = it.animatedValue as Float
+                    val t = (currentOffsetY -startOffset) / (toOffset.toFloat() - startOffset)
+                    highlightProgress = t
+                    prevHighlightProgress = 1 - t
+                    invalidate()
+                }
+                start()
+            }
+        }
 
-        currentOffsetY = getOffsetForLine(index, progress)
-
-        invalidate()
     }
 
-    // 当前行动画进度（0f = 普通行，1f = 完全高亮）
-    private var highlightProgress = 1f
 
     override fun onDraw(canvas: Canvas) {
         super.onDraw(canvas)
@@ -258,12 +276,12 @@ class LyricView @JvmOverloads constructor(
             val primaryLayout: StaticLayout
             val sencondLayout: StaticLayout?
             val primaryTop :Float
-            val blendedColor : Int
+//            val blendedColor : Int
             // 是否是当前行
             if(i == currentLineIndex){
                 // 计算缩放比例（1.0 ~ 1.15）
                 scale =   1.0f + (maxScale - 1f) * highlightProgress
-                blendedColor = lerpColor(normalPaint.color, highlightPaint.color, highlightProgress)
+//                blendedColor = lerpColor(normalPaint.color, highlightPaint.color, highlightProgress)
                 // 主歌词：选择高亮或普通 layout
                 primaryLayout = layout.primaryHighlight
                 sencondLayout = layout.secondaryHighlight
@@ -271,31 +289,32 @@ class LyricView @JvmOverloads constructor(
                 primaryTop = top
 
             }else{
-                scale = 1.0f
-                blendedColor = normalPaint.color
+                scale = if (i == previousLineIndex){
+                    1f + (maxScale - 1f) * prevHighlightProgress
+                }else{
+                    1.0f
+                }
+//                blendedColor = normalPaint.color
                 primaryLayout = layout.primary
                 sencondLayout = layout.secondary
                 primaryTop = top + lastHeightFix
-
             }
 
+
             // 主歌词居中
-            canvas.save()
-            canvas.translate(width/2f, primaryTop)
-            canvas.scale(scale, scale)
-            primaryLayout.paint.color = blendedColor
-            primaryLayout.draw(canvas)
-            canvas.restore()
+            canvas.withTranslation(width / 2f, primaryTop) {
+                scale(scale, scale)
+                primaryLayout.draw(this)
+            }
 
             // 副歌词居中
             sencondLayout?.let { sec ->
 //                val secondaryLeft = paddingLeft + (width - paddingLeft - paddingRight - sec.width) / 2f
                 val secTop = top + lastHeightFix + layout.primary.height + primarySecondaryGap
 
-                canvas.save()
-                canvas.translate(width/2f, secTop)
-                sec.draw(canvas)
-                canvas.restore()
+                canvas.withTranslation(width / 2f, secTop) {
+                    sec.draw(this)
+                }
             }
         }
         drawFadeMask(canvas)
@@ -343,8 +362,6 @@ class LyricView @JvmOverloads constructor(
         canvas.drawRect(0f, height - fadeHeight.toFloat(), width.toFloat(), height.toFloat(), fadePaint)
     }
 
-
-
     private var lastClickTime = 0L
     private val clickCooldown = 300L // 300ms 内不允许再次点击
 
@@ -373,6 +390,7 @@ class LyricView @JvmOverloads constructor(
                 val clickedIndex = findIndexByY(absoluteY)
 
                 if (clickedIndex in lyrics.indices) {
+                    lyricOffsetNeedFix = true
                     onLineClickListener?.invoke(lyrics[clickedIndex].timeMs, clickedIndex)
                 }
                 performClick() // 遵循 A11y 规范
@@ -380,6 +398,9 @@ class LyricView @JvmOverloads constructor(
             }
         }
         return super.onTouchEvent(event)
+    }
+    override fun performClick(): Boolean {
+        return super.performClick()
     }
 
     // 根据像素 y（相对于 cumulative 起点）查找行索引
@@ -405,15 +426,18 @@ class LyricView @JvmOverloads constructor(
         return  min(max(left, 0), layouts.size - 1)
     }
 
+    /**
+     * 根据时间戳查找当前行的index.查找时将时间戳加100ms,即提前100ms进入下一行。
+     */
     private fun findCurrentLineIndex(positionMs: Long): Int {
+        val checkTMs = positionMs + 100
         var left = 0
         var right = lyrics.size - 1
         var result = 0
 
         while (left <= right) {
             val mid = (left + right) / 2
-            val time = lyrics[mid].timeMs
-            if (time <= positionMs) {
+            if (lyrics[mid].timeMs <= checkTMs) {
                 result = mid
                 left = mid + 1
             } else {

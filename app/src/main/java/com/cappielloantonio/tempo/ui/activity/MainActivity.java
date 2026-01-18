@@ -6,6 +6,7 @@ import android.content.IntentFilter;
 import android.net.ConnectivityManager;
 import android.net.NetworkInfo;
 import android.net.Uri;
+import android.os.Build;
 import android.os.Bundle;
 import android.os.Handler;
 import android.os.Looper;
@@ -275,38 +276,62 @@ public class MainActivity extends BaseActivity {
     private void initService() {
         MediaManager.check(getMediaBrowserListenableFuture());
 
-        getMediaBrowserListenableFuture().addListener(() -> {
-            try {
-                // 获取 MediaBrowser 实例
-                MediaBrowser browser = getMediaBrowserListenableFuture().get();
-                // --- 新增：启动 7 秒后自动播放逻辑 ---
-                if (browser != null) {
-                    new Handler(Looper.getMainLooper()).postDelayed(() -> {
-                        // 检查浏览器是否仍然连接，并且当前没有在播放
-                        if (browser.isConnected()) {
-                            // 如果队列中有媒体项目，则开始播放
-                            if (browser.getMediaItemCount() > 0) {
-                                browser.play();
-                            }
-                        }
-                    }, 7000); // 7000 毫秒 = 7 秒
+        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P) {
+            getMediaBrowserListenableFuture().addListener(() -> {
+                try {
+                    // 获取 MediaBrowser 实例
+                    MediaBrowser browser = getMediaBrowserListenableFuture().get();
+                    if (browser != null) {
 
-                    browser.addListener(new Player.Listener() {
-                        @Override
-                        public void onIsPlayingChanged(boolean isPlaying) {
-                            if (isPlaying && bottomSheetBehavior.getState() == BottomSheetBehavior.STATE_HIDDEN) {
-                                setBottomSheetInPeek(true);
+
+                        autoPlay(browser);
+                        browser.addListener(new Player.Listener() {
+                            @Override
+                            public void onIsPlayingChanged(boolean isPlaying) {
+                                if (isPlaying && bottomSheetBehavior.getState() == BottomSheetBehavior.STATE_HIDDEN) {
+                                    setBottomSheetInPeek(true);
+                                }
                             }
-                        }
-                    });
+                        });
+
+                    }
+
+
+                } catch (ExecutionException e) {
+                    Log.e(TAG, "MediaBrowser execution failed", e);
+                } catch (InterruptedException e) {
+                    Log.e(TAG, "MediaBrowser initialization interrupted", e);
+                    // 重新设置中断状态，以便调用栈更高层的代码知道线程已被中断
+                    Thread.currentThread().interrupt();
                 }
-
-
-            } catch (ExecutionException | InterruptedException e) {
-                e.printStackTrace();
-            }
-        }, MoreExecutors.directExecutor());
+            }, getMainExecutor());
+        }
     }
+
+    private void autoPlay(MediaBrowser browser) {
+        // 不是首次启动 → 不自动播放
+        if (!Preferences.isFirstLaunch()) {
+            return;
+        }
+
+        if (browser == null || !browser.isConnected()) return;
+
+        new Handler(Looper.getMainLooper()).postDelayed(() -> {
+            if (isFinishing() || isDestroyed() || !browser.isConnected()) {
+                return;
+            }
+            try {
+                Log.d(TAG, "MediaBrowser about to auto-start");
+                if (browser.getMediaItemCount() > 0) {
+                    browser.play();
+                    Preferences.setFirstLaunch(false); // 播放后标记为已启动
+                }
+            } catch (Throwable e) {
+                Log.e(TAG, "Auto-play failed", e);
+            }
+        }, 2000);
+    }
+
 
     private void goToLogin() {
         bottomSheetBehavior.setState(BottomSheetBehavior.STATE_HIDDEN);
