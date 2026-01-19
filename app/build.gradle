@@ -19,8 +19,8 @@ android {
         // 添加 HarmonyOS 支持
         manifestPlaceholders["HARMONYOS_SUPPORT"] = "true"
 
-        versionCode 26011801
-        versionName '4.6.4.26011801'
+        versionCode 26011901
+        versionName '4.6.4.26011901'
         testInstrumentationRunner 'androidx.test.runner.AndroidJUnitRunner'
 
         javaCompileOptions {
@@ -136,6 +136,9 @@ dependencies {
 
     implementation 'androidx.core:core:1.13.1'
     implementation 'androidx.core:core-ktx:1.13.1'
+    implementation "androidx.dynamicanimation:dynamicanimation:1.1.0"
+    implementation "androidx.documentfile:documentfile:1.1.0"
+
 
     // Android Material
     implementation 'com.google.android.material:material:1.10.0'
@@ -159,6 +162,9 @@ dependencies {
     implementation 'com.squareup.retrofit2:retrofit:2.11.0'
     implementation 'com.squareup.okhttp3:logging-interceptor:5.0.0-alpha.14'
     implementation 'com.squareup.retrofit2:converter-gson:2.11.0'
+
+    // 解决 J2ObjC 注解缺失导致的编译警告
+    compileOnly 'com.google.j2objc:j2objc-annotations:3.1'
 }
 java {
     toolchain {

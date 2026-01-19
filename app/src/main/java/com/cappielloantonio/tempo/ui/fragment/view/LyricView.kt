@@ -18,6 +18,9 @@ import android.view.MotionEvent
 import android.view.View
 import android.view.animation.DecelerateInterpolator
 import androidx.core.graphics.withTranslation
+import androidx.dynamicanimation.animation.FloatPropertyCompat
+import androidx.dynamicanimation.animation.SpringAnimation
+import androidx.dynamicanimation.animation.SpringForce
 import com.cappielloantonio.tempo.ui.fragment.model.BilingualLine
 import kotlin.math.max
 import kotlin.math.min
@@ -37,6 +40,9 @@ class LyricView @JvmOverloads constructor(
 
     // 当前滚动偏移（以“行”为单位的偏移量 * lineHeight）
     private var currentOffsetY: Float = 0f
+    //动画开始的起点，使用初始currentOffsetY 赋值，与currentOffsetY对比计算动画进度。
+    private var startOffset: Float = 0f
+    private var targetOffset: Float = 0f
 
     // 行高（像素）
     private var lineHeight: Float = 0f
@@ -103,21 +109,33 @@ class LyricView @JvmOverloads constructor(
     private lateinit var cumulativeHeights: IntArray
 
     private fun buildLayout(text: String, paint: TextPaint, width: Int): StaticLayout {
-        return StaticLayout.Builder
+        val key = "$text|${paint.textSize}|${paint.color}|$width"
+        layoutCache[key]?.let { return it }
+
+        val layout = StaticLayout.Builder
             .obtain(text, 0, text.length, paint, width)
-//            .setAlignment(Layout.Alignment.ALIGN_CENTER)//原因不明，AI也无法回答，设置了居中后反而会变成右对齐。
+            /*.setAlignment(Layout.Alignment.ALIGN_CENTER)//原因不明，AI也无法回答，设置了居中后反而会变成右对齐。*/
             .setIncludePad(false)
             .build()
+        layoutCache[key] = layout
+        return layout
     }
 
+
+    private val layoutCache = HashMap<String, StaticLayout>()
+
+
     override fun onSizeChanged(w: Int, h: Int, oldw: Int, oldh: Int) {
-        android.util.Log.d("LyricsDebug", "onSizeChanged: width=$w, height=$h, oldWidth=$oldw, oldHeight=$oldh")
+        Log.d("LyricsDebug", "onSizeChanged: width=$w, height=$h, oldWidth=$oldw, oldHeight=$oldh")
         super.onSizeChanged(w, h, oldw, oldh)
         if (lyrics.isNotEmpty()) {
             // 重新构建 layouts，复用 setLyrics 的逻辑
             setLyrics(lyrics)
         }
-//        lyricOffsetNeedFix = true
+        if (w != oldw) { layoutCache.clear()
+            // ⭐宽度变了必须重建
+            rebuildLayouts()
+        }
     }
 
     fun setLyrics(list: List<BilingualLine>) {
@@ -135,6 +153,7 @@ class LyricView @JvmOverloads constructor(
         secondaryHightlightPaint.color = themeColor(com.google.android.material.R.attr.colorOnBackground)
 
         // 重新构建 layout（字体颜色变化不会自动刷新）
+        layoutCache.clear() // ⭐必须清空缓存，否则颜色不更新
         rebuildLayouts()
     }
 
@@ -202,16 +221,43 @@ class LyricView @JvmOverloads constructor(
     // 上一行 index
     private var previousLineIndex = -1
 
-    // 动画参数
-    var scrollDuration = 150L
 
     var lyricOffsetNeedFix = true
+
+
+    private val offsetProperty = object : FloatPropertyCompat<LyricView>("offset") {
+        override fun getValue(view: LyricView): Float {
+            return view.currentOffsetY
+        }
+
+        override fun setValue(view: LyricView, value: Float) {
+            view.currentOffsetY = value
+
+            // ⭐ 计算动画进度（0~1）
+            val total = targetOffset - startOffset
+            if (total != 0f) {
+                val t = ((value - startOffset) / total).coerceIn(0f, 1f)
+                highlightProgress = t
+                prevHighlightProgress = 1f - t
+            }
+
+            view.invalidate()
+        }
+    }
+
+
+    private val offsetAnim = SpringAnimation(this, offsetProperty).apply {
+        spring = SpringForce().apply {
+            stiffness = SpringForce.STIFFNESS_LOW              // 刚度：越低越“软”
+            dampingRatio = SpringForce.DAMPING_RATIO_LOW_BOUNCY // 阻尼：控制回弹感
+        }
+    }
+
 
     /**
      * 外部播放器定期调用，positionMs 为当前播放进度（毫秒）
      */
     fun setProgress(positionMs: Long) {
-        Log.d(TAG, "start setProgress! positionMs:{$positionMs}")
         if (lyrics.isEmpty() || layouts.isEmpty()) return
 
         val index = findCurrentLineIndex(positionMs)
@@ -223,7 +269,7 @@ class LyricView @JvmOverloads constructor(
         }
         currentLineIndex = index
 
-        val toOffset = cumulativeHeights[index]
+        val toOffset = cumulativeHeights[index].toFloat()
 
         if (!lyricOffsetNeedFix && (highlightProgress != 1f || !needMove)){
             // 有其他动画进程正在运行，本次不运行动画
@@ -232,25 +278,21 @@ class LyricView @JvmOverloads constructor(
         }
         lyricOffsetNeedFix = false
 
-        val startOffset = currentOffsetY
 
-        if (startOffset == toOffset.toFloat()){
+        if (currentOffsetY == toOffset){
 //            需要渲染画面，但不需要动画
             invalidate()
         }else{
-            scrollAnimator?.cancel()
-            scrollAnimator = ValueAnimator.ofFloat(startOffset, toOffset.toFloat()).apply {
-                duration = scrollDuration  // 你可以调成 80~150ms
-                interpolator = DecelerateInterpolator()
-                addUpdateListener {
-                    currentOffsetY = it.animatedValue as Float
-                    val t = (currentOffsetY -startOffset) / (toOffset.toFloat() - startOffset)
-                    highlightProgress = t
-                    prevHighlightProgress = 1 - t
-                    invalidate()
-                }
-                start()
-            }
+            offsetAnim.cancel()
+
+            startOffset = currentOffsetY
+            targetOffset = toOffset
+            val distance = toOffset - currentOffsetY
+            val velocity = distance / 120f   // 120ms 的速度常数，可调
+            offsetAnim.setStartVelocity(velocity)
+            offsetAnim.setStartValue(startOffset)
+            offsetAnim.animateToFinalPosition(toOffset)
+
         }
 
     }
@@ -276,12 +318,10 @@ class LyricView @JvmOverloads constructor(
             val primaryLayout: StaticLayout
             val sencondLayout: StaticLayout?
             val primaryTop :Float
-//            val blendedColor : Int
             // 是否是当前行
             if(i == currentLineIndex){
                 // 计算缩放比例（1.0 ~ 1.15）
                 scale =   1.0f + (maxScale - 1f) * highlightProgress
-//                blendedColor = lerpColor(normalPaint.color, highlightPaint.color, highlightProgress)
                 // 主歌词：选择高亮或普通 layout
                 primaryLayout = layout.primaryHighlight
                 sencondLayout = layout.secondaryHighlight
@@ -294,7 +334,6 @@ class LyricView @JvmOverloads constructor(
                 }else{
                     1.0f
                 }
-//                blendedColor = normalPaint.color
                 primaryLayout = layout.primary
                 sencondLayout = layout.secondary
                 primaryTop = top + lastHeightFix
@@ -306,6 +345,12 @@ class LyricView @JvmOverloads constructor(
                 scale(scale, scale)
                 primaryLayout.draw(this)
             }
+//            val primaryLeft = width / 2f - primaryLayout.width / 2f
+//            canvas.save()
+//            canvas.translate(primaryLeft, primaryTop)
+//            primaryLayout.draw(canvas)
+//            canvas.restore()
+
 
             // 副歌词居中
             sencondLayout?.let { sec ->
