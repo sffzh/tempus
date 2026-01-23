@@ -11,7 +11,6 @@ import androidx.lifecycle.ViewModelProvider;
 import androidx.navigation.NavController;
 import androidx.navigation.NavOptions;
 
-import com.cappielloantonio.tempo.BuildConfig;
 import com.cappielloantonio.tempo.R;
 import com.cappielloantonio.tempo.repository.AlbumRepository;
 import com.cappielloantonio.tempo.repository.ArtistRepository;
@@ -41,24 +40,24 @@ public final class AssetLinkNavigator {
         if (assetLink == null) {
             return;
         }
-        switch (assetLink.type) {
+        switch (assetLink.type()) {
             case AssetLinkUtil.TYPE_SONG:
-                openSong(assetLink.id);
+                openSong(assetLink.id());
                 break;
             case AssetLinkUtil.TYPE_ALBUM:
-                openAlbum(assetLink.id);
+                openAlbum(assetLink.id());
                 break;
             case AssetLinkUtil.TYPE_ARTIST:
-                openArtist(assetLink.id);
+                openArtist(assetLink.id());
                 break;
             case AssetLinkUtil.TYPE_PLAYLIST:
-                openPlaylist(assetLink.id);
+                openPlaylist(assetLink.id());
                 break;
             case AssetLinkUtil.TYPE_GENRE:
-                openGenre(assetLink.id);
+                openGenre(assetLink.id());
                 break;
             case AssetLinkUtil.TYPE_YEAR:
-                openYear(assetLink.id);
+                openYear(assetLink.id());
                 break;
             default:
                 Toast.makeText(activity, R.string.asset_link_error_unsupported, Toast.LENGTH_SHORT).show();

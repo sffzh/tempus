@@ -23,6 +23,7 @@ import androidx.annotation.OptIn;
 import androidx.appcompat.app.AppCompatDelegate;
 import androidx.core.os.LocaleListCompat;
 import androidx.lifecycle.ViewModelProvider;
+import androidx.media3.common.util.Log;
 import androidx.media3.common.util.UnstableApi;
 import androidx.navigation.NavController;
 import androidx.navigation.NavOptions;
@@ -106,8 +107,11 @@ public class SettingsFragment extends PreferenceFragmentCompat {
                         }
                     }
                 });
+
+        bindMediaService();
     }
 
+    @NonNull
     @Override
     public View onCreateView(@NonNull LayoutInflater inflater, ViewGroup container, Bundle savedInstanceState) {
         activity = (MainActivity) getActivity();
@@ -115,9 +119,7 @@ public class SettingsFragment extends PreferenceFragmentCompat {
         View view = super.onCreateView(inflater, container, savedInstanceState);
         settingViewModel = new ViewModelProvider(requireActivity()).get(SettingViewModel.class);
 
-        if (view != null) {
-            getListView().setPadding(0, 0, 0, (int) getResources().getDimension(R.dimen.global_padding_bottom));
-        }
+        getListView().setPadding(0, 0, 0, (int) getResources().getDimension(R.dimen.global_padding_bottom));
 
         return view;
     }
@@ -139,6 +141,11 @@ public class SettingsFragment extends PreferenceFragmentCompat {
         checkDownloadDirectory();
 
         setStreamingCacheSize();
+    }
+
+    @Override
+    public void onViewCreated(@NonNull View view, @Nullable Bundle savedInstanceState) {
+        super.onViewCreated(view, savedInstanceState);
         setAppLanguage();
         setVersion();
 
@@ -155,9 +162,10 @@ public class SettingsFragment extends PreferenceFragmentCompat {
         actionAutoDownloadLyrics();
         actionMiniPlayerHeart();
 
-        bindMediaService();
+        // 3. 服务绑定相关
         actionAppEqualizer();
     }
+
 
     @Override
     public void onStop() {
@@ -169,6 +177,7 @@ public class SettingsFragment extends PreferenceFragmentCompat {
     public void onCreatePreferences(Bundle savedInstanceState, String rootKey) {
         setPreferencesFromResource(R.xml.global_preferences, rootKey);
         ListPreference themePreference = findPreference(Preferences.THEME);
+        Log.d(TAG, "onCreatePreferences: themePreference has been found: " + themePreference);
         if (themePreference != null) {
             themePreference.setOnPreferenceChangeListener(
                     (preference, newValue) -> {

@@ -61,7 +61,7 @@ public class MusicUtil {
 
         uri.append("&id=").append(id);
 
-        Log.d(TAG, "getStreamUri: " + uri);
+//        Log.d(TAG, "getStreamUri: " + uri);
 
         return Uri.parse(uri.toString());
     }

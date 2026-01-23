@@ -3,10 +3,12 @@ package com.cappielloantonio.tempo.viewmodel;
 import android.app.Application;
 
 import androidx.annotation.NonNull;
+import androidx.annotation.OptIn;
 import androidx.lifecycle.AndroidViewModel;
 import androidx.lifecycle.LifecycleOwner;
 import androidx.lifecycle.LiveData;
 import androidx.lifecycle.MutableLiveData;
+import androidx.media3.common.util.UnstableApi;
 
 import com.cappielloantonio.tempo.repository.PlaylistRepository;
 import com.cappielloantonio.tempo.subsonic.models.Child;
@@ -38,6 +40,7 @@ public class PlaylistPageViewModel extends AndroidViewModel {
         this.playlist = playlist;
     }
 
+    @OptIn(markerClass = UnstableApi.class)
     public LiveData<Boolean> isPinned(LifecycleOwner owner) {
         MutableLiveData<Boolean> isPinnedLive = new MutableLiveData<>();
 

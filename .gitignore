@@ -1,6 +1,8 @@
 *.iml
 .gradle
 /local.properties
+/local-wsl.properties
+/local-win.properties
 /.idea/caches
 /.idea/libraries
 /.idea/modules.xml
@@ -8,6 +10,7 @@
 /.idea/navEditor.xml
 /.idea/assetWizardSettings.xml
 /build_local.bat
+/build_local.sh
 .DS_Store
 /build
 /captures

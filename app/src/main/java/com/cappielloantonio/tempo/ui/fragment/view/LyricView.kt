@@ -1,5 +1,4 @@
 package com.cappielloantonio.tempo.ui.fragment.view
-import android.animation.ValueAnimator
 import android.content.Context
 import android.content.res.Configuration
 import android.graphics.Canvas
@@ -7,8 +6,7 @@ import android.graphics.Color
 import android.graphics.LinearGradient
 import android.graphics.Paint
 import android.graphics.Shader
-import android.graphics.drawable.ColorDrawable
-import android.graphics.drawable.GradientDrawable
+import com.google.android.material.color.MaterialColors
 import android.text.StaticLayout
 import android.text.TextPaint
 import android.util.AttributeSet
@@ -16,21 +14,21 @@ import android.util.Log
 import android.util.TypedValue
 import android.view.MotionEvent
 import android.view.View
-import android.view.animation.DecelerateInterpolator
-import androidx.core.graphics.withTranslation
 import androidx.dynamicanimation.animation.FloatPropertyCompat
 import androidx.dynamicanimation.animation.SpringAnimation
 import androidx.dynamicanimation.animation.SpringForce
+import com.cappielloantonio.tempo.R
 import com.cappielloantonio.tempo.ui.fragment.model.BilingualLine
 import kotlin.math.max
 import kotlin.math.min
+
+const val TAG: String = "LyricView"
 
 class LyricView @JvmOverloads constructor(
     context: Context,
     attrs: AttributeSet? = null,
     defStyleAttr: Int = 0
 ) : View(context, attrs, defStyleAttr) {
-    val TAG: String = "LyricView"
 
     // 歌词数据
     private var lyrics: List<BilingualLine> = emptyList()
@@ -44,8 +42,11 @@ class LyricView @JvmOverloads constructor(
     private var startOffset: Float = 0f
     private var targetOffset: Float = 0f
 
-    // 行高（像素）
-    private var lineHeight: Float = 0f
+    // ===== 渐变遮罩缓存（零 GC） =====
+    private var fadeHeightPx = 0
+    private var topFadeShader: LinearGradient? = null
+    private var bottomFadeShader: LinearGradient? = null
+    private val fadePaint = Paint()
 
     private fun themeColor(attr: Int): Int {
         val typedValue = TypedValue()
@@ -54,45 +55,58 @@ class LyricView @JvmOverloads constructor(
     }
 
     private val normalPaint = TextPaint(Paint.ANTI_ALIAS_FLAG).apply {
-        color = themeColor(com.google.android.material.R.attr.colorOnSurfaceVariant)
+        // 第三个参数是默认色，防止主题中未定义该属性时崩溃
+        color = MaterialColors.getColor(context, R.attr.colorOnSurfaceVariant, Color.GRAY)
         textSize = sp(20f)
         textAlign = Paint.Align.CENTER
     }
 
     private val highlightPaint = TextPaint(Paint.ANTI_ALIAS_FLAG).apply {
-        color = themeColor(com.google.android.material.R.attr.colorOnBackground)
+        color = MaterialColors.getColor(context, R.attr.colorOnBackground, Color.GRAY) // 更淡
         textSize = sp(20f)
         textAlign = Paint.Align.CENTER
         isFakeBoldText = true
     }
 
     private val secondaryPaint = TextPaint(Paint.ANTI_ALIAS_FLAG).apply {
-        color = themeColor(com.google.android.material.R.attr.colorOnSurfaceVariant) // 更淡
+        color = MaterialColors.getColor(context, R.attr.colorOnSurfaceVariant, Color.GRAY)
         textSize = sp(18f)
         textAlign = Paint.Align.CENTER
     }
 
     private val secondaryHightlightPaint = TextPaint(Paint.ANTI_ALIAS_FLAG).apply {
-        color = themeColor(com.google.android.material.R.attr.colorOnBackground) // 更淡
-        textSize = sp(18f)
+        color = MaterialColors.getColor(context, R.attr.colorOnBackground, Color.GRAY) // 更淡
+        textSize = sp(19f)
         textAlign = Paint.Align.CENTER
     }
 
     // 点击回调
     private var onLineClickListener: ((timeMs: Long, index: Int) -> Unit)? = null
 
-    // 用于测量文字高度
-    private val textBounds = android.graphics.Rect()
+    private var primaryLineHeight = 0
+    private var primaryHighlightLineHeight = 0
+    private var secondaryLineHeight = 0
+    private var secondaryHighlightLineHeight = 0
+    private fun computeLineHeights() {
+        val pfm = normalPaint.fontMetrics
+        primaryLineHeight = (pfm.descent - pfm.ascent).toInt()
 
+        val phfm = highlightPaint.fontMetrics
+        primaryHighlightLineHeight = (phfm.descent - phfm.ascent).toInt()
 
+        val sfm = secondaryPaint.fontMetrics
+        secondaryLineHeight = (sfm.descent - sfm.ascent).toInt()
+
+        val shfm = secondaryHightlightPaint.fontMetrics
+        secondaryHighlightLineHeight = (shfm.descent - shfm.ascent).toInt()
+    }
 
     init {
+        Log.d(TAG, "LyricView Started")
         isClickable = true
         isFocusable = true
         // 预估行高
-        val sample = "载入歌词……"
-        highlightPaint.getTextBounds(sample, 0, sample.length, textBounds)
-        lineHeight = textBounds.height() * 1.8f
+        computeLineHeights()
     }
 
     private data class LyricLayout(
@@ -101,7 +115,8 @@ class LyricView @JvmOverloads constructor(
         val secondary: StaticLayout?,
         val secondaryHighlight: StaticLayout?,
         val height: Int,
-        var heightFix: Int
+        val primaryBaselineOffset: Float,
+        var hightlightHeight: Float
     )
 
     private var layouts: List<LyricLayout> = emptyList()
@@ -114,28 +129,58 @@ class LyricView @JvmOverloads constructor(
 
         val layout = StaticLayout.Builder
             .obtain(text, 0, text.length, paint, width)
-            /*.setAlignment(Layout.Alignment.ALIGN_CENTER)//原因不明，AI也无法回答，设置了居中后反而会变成右对齐。*/
+            /*.setAlignment(Layout.Alignment.ALIGN_CENTER)//不能设置居中对齐。原因暂不明，设置了居中后反而会变成右对齐。*/
             .setIncludePad(false)
             .build()
         layoutCache[key] = layout
         return layout
     }
 
+    // ===== StaticLayout LRU 缓存 =====
+    private val layoutCache = object : LinkedHashMap<String, StaticLayout>(200, 0.75f, true) {
+        private val maxSize = 400   // 200~400 都很安全
 
-    private val layoutCache = HashMap<String, StaticLayout>()
-
+        override fun removeEldestEntry(eldest: MutableMap.MutableEntry<String, StaticLayout>?): Boolean {
+            return size > maxSize
+        }
+    }
 
     override fun onSizeChanged(w: Int, h: Int, oldw: Int, oldh: Int) {
-        Log.d("LyricsDebug", "onSizeChanged: width=$w, height=$h, oldWidth=$oldw, oldHeight=$oldh")
+//        Log.d("LyricsDebug", "onSizeChanged: width=$w, height=$h, oldWidth=$oldw, oldHeight=$oldh")
         super.onSizeChanged(w, h, oldw, oldh)
+        computeLineHeights()
+        fadeHeightPx = dp(55).toInt()
+
+        // 推荐：直接通过属性获取颜色，不再依赖 getBackgroundColor() 里的 Drawable 判断
+        val bgColor = MaterialColors.getColor(context, R.attr.colorSurface, Color.BLACK)
+        Log.d(TAG, "theme_bgColor = ${Integer.toHexString(bgColor)}")
+
+        val transparent = bgColor and 0x00FFFFFF
+
+        // 顶部渐变：背景色 → 透明
+        topFadeShader = LinearGradient(
+            0f, 0f, 0f, fadeHeightPx.toFloat(),
+            bgColor, transparent,
+            Shader.TileMode.CLAMP
+        )
+
+        // 底部渐变：透明 → 背景色
+        bottomFadeShader = LinearGradient(
+            0f, (h - fadeHeightPx).toFloat(), 0f, h.toFloat(),
+            transparent, bgColor,
+            Shader.TileMode.CLAMP
+        )
+
         if (lyrics.isNotEmpty()) {
             // 重新构建 layouts，复用 setLyrics 的逻辑
             setLyrics(lyrics)
         }
-        if (w != oldw) { layoutCache.clear()
-            // ⭐宽度变了必须重建
+        if (w != oldw) {
+            //宽度变化清空layout缓存
+            layoutCache.clear()
             rebuildLayouts()
         }
+        lyricOffsetNeedFix =true
     }
 
     fun setLyrics(list: List<BilingualLine>) {
@@ -147,10 +192,10 @@ class LyricView @JvmOverloads constructor(
         super.onConfigurationChanged(newConfig)
 
         // 重新应用主题颜色
-        normalPaint.color = themeColor(com.google.android.material.R.attr.colorOnSurfaceVariant)
-        highlightPaint.color = themeColor(com.google.android.material.R.attr.colorOnBackground)
-        secondaryPaint.color = themeColor(com.google.android.material.R.attr.colorOnSurfaceVariant)
-        secondaryHightlightPaint.color = themeColor(com.google.android.material.R.attr.colorOnBackground)
+        normalPaint.color = MaterialColors.getColor(context,R.attr.colorOnSurfaceVariant, Color.GRAY)
+        highlightPaint.color = MaterialColors.getColor(context, R.attr.colorOnBackground, Color.GRAY)
+        secondaryPaint.color = MaterialColors.getColor(context, R.attr.colorOnSurfaceVariant, Color.GRAY)
+        secondaryHightlightPaint.color = MaterialColors.getColor(context, R.attr.colorOnBackground, Color.GRAY)
 
         // 重新构建 layout（字体颜色变化不会自动刷新）
         layoutCache.clear() // ⭐必须清空缓存，否则颜色不更新
@@ -166,7 +211,7 @@ class LyricView @JvmOverloads constructor(
     private fun rebuildLayouts(){
         if (width <= 0) return
         val availableWidth = ((width - paddingLeft - paddingRight)*0.87f).toInt().coerceAtLeast(1)
-        layouts = lyrics.map { line ->
+        val newLayouts  = lyrics.map { line ->
             val primaryLayout = buildLayout(line.primary, normalPaint, availableWidth)
 
             val primaryHighlight = buildLayout(line.primary, highlightPaint, availableWidth)
@@ -178,39 +223,47 @@ class LyricView @JvmOverloads constructor(
                 buildLayout(it, secondaryHightlightPaint, availableWidth)
             }
 
-            val totalHeight = primaryLayout.height +
-                    (secondaryLayout?.height?.plus(primarySecondaryGap) ?: 0) + // 主副歌词之间的间距
+            val totalHeight = primaryLineHeight * primaryLayout.lineCount +
+                    (secondaryLayout?.lineCount?.times(secondaryLineHeight)?.plus(primarySecondaryGap)
+                        ?: 0) +
+                    lineGap // 主副歌词之间的间距
+            val primaryHighlightHeight = primaryHighlightLineHeight * primaryLayout.lineCount * maxScale;
+            val hightlightHeight = primaryHighlightHeight +
+                    (secondaryHighlight?.lineCount?.times(secondaryHighlightLineHeight)?.plus(primarySecondaryGap) ?: 0) +
                     lineGap
+
+//            Log.d(TAG, "rebuild_layouts: primaryLineHeight: $primaryLineHeight, secondaryLineHeight: " +
+//                    "${secondaryLayout?.lineCount}; primaryLayout.lineCount: ${primaryLayout.lineCount}, totalHeight: $totalHeight; lineText:${line.primary}")
 
             LyricLayout(primaryLayout, primaryHighlight, secondaryLayout, secondaryHighlight
                 , totalHeight
-                , (primaryHighlight.height * 1.15f - primaryLayout.height).toInt())
+                , primaryHighlightHeight/2f
+                , hightlightHeight)
+
         }
 
         // 计算累计高度
-        cumulativeHeights = IntArray(layouts.size)
+//        cumulativeHeights = IntArray(layouts.size)
+        val newHeights = IntArray(newLayouts.size)
         var sum = 0
-        for (i in layouts.indices) {
-            cumulativeHeights[i] = sum
-            sum += layouts[i].height
+        for (i in newLayouts.indices) {
+            newHeights[i] = sum + (newLayouts[i].hightlightHeight/2f).toInt()
+            sum += newLayouts[i].height
         }
+
+        // 3. 原子性赋值：确保两者同步更新
+        layouts = newLayouts
+        cumulativeHeights = newHeights
 
         invalidate()
     }
 
-
-    private fun getOffsetForLine(index: Int, progress: Float): Float {
-        val base = cumulativeHeights[index]
-        val next = cumulativeHeights.getOrNull(index + 1) ?: (base + layouts[index].height)
-        return base + (next - base) * progress
-    }
 
     fun setOnLineClickListener(listener: ((timeMs: Long, index: Int) -> Unit)?) {
         onLineClickListener = listener
     }
 
     private val maxScale = 1.15f
-    private var scrollAnimator: ValueAnimator? = null
 
     // 当前行放大进度（0~1）
     private var highlightProgress = 0f
@@ -258,7 +311,8 @@ class LyricView @JvmOverloads constructor(
      * 外部播放器定期调用，positionMs 为当前播放进度（毫秒）
      */
     fun setProgress(positionMs: Long) {
-        if (lyrics.isEmpty() || layouts.isEmpty()) return
+        if (lyrics.isEmpty() || !::cumulativeHeights.isInitialized || layouts.size != cumulativeHeights.size) return
+//        if (lyrics.isEmpty() || layouts.isEmpty()) return
 
         val index = findCurrentLineIndex(positionMs)
         val needMove = if (index == currentLineIndex) {
@@ -297,114 +351,121 @@ class LyricView @JvmOverloads constructor(
 
     }
 
-
     override fun onDraw(canvas: Canvas) {
         super.onDraw(canvas)
-        if (lyrics.isEmpty() || layouts.isEmpty()) return
+        if (lyrics.isEmpty() || layouts.isEmpty() || !::cumulativeHeights.isInitialized) return
+//        if (lyrics.isEmpty() || layouts.isEmpty()) return
 
-        val centerY = height / 2f
+        val viewWidth = width.toFloat()
+        val viewHeight = height.toFloat()
+        val centerX = viewWidth / 2f
+        val centerY = viewHeight / 2f
         val centerOffset = currentOffsetY
 
-//        val availableWidth = (width - paddingLeft - paddingRight).coerceAtLeast(1)
-        var lastHeightFix = 0
-        for (i in layouts.indices) {
+        var lastHeightFix = 0f
+
+        val lineCount = layouts.size
+        var i = 0
+        while (i < lineCount) {
             val layout = layouts[i]
+
+            // 该行顶部（未考虑 heightFix）
             val top = cumulativeHeights[i] - centerOffset + centerY
 
-            // 只绘制可见区域
-            if (top > height || top + layout.height < 0) continue
+            // 可见性裁剪：整行在屏幕外则跳过
+            if (top > viewHeight || top + layout.height < 0f) {
+                i++
+                continue
+            }
 
-            val  scale: Float
+            // 计算缩放比例 & 使用哪个 layout
+            val isCurrent = (i == currentLineIndex)
+            val isPrevious = (i == previousLineIndex)
+
+            val scale: Float
             val primaryLayout: StaticLayout
-            val sencondLayout: StaticLayout?
-            val primaryTop :Float
-            // 是否是当前行
-            if(i == currentLineIndex){
-                // 计算缩放比例（1.0 ~ 1.15）
-                scale =   1.0f + (maxScale - 1f) * highlightProgress
-                // 主歌词：选择高亮或普通 layout
-                primaryLayout = layout.primaryHighlight
-                sencondLayout = layout.secondaryHighlight
-                lastHeightFix = layout.heightFix
-                primaryTop = top
+            val secondaryLayout: StaticLayout?
+            val primaryTop: Float
 
-            }else{
-                scale = if (i == previousLineIndex){
-                    1f + (maxScale - 1f) * prevHighlightProgress
-                }else{
+            if (isCurrent) {
+                // 当前行：放大
+                scale = 1.0f + (maxScale - 1f) * highlightProgress
+                primaryLayout = layout.primaryHighlight
+                secondaryLayout = layout.secondaryHighlight
+                lastHeightFix = layout.hightlightHeight - layout.height
+                primaryTop = top
+            } else {
+                // 非当前行
+                scale = if (isPrevious) {
+                    1.0f + (maxScale - 1f) * prevHighlightProgress
+                } else {
                     1.0f
                 }
                 primaryLayout = layout.primary
-                sencondLayout = layout.secondary
+                secondaryLayout = layout.secondary
                 primaryTop = top + lastHeightFix
             }
 
+            // ===== 绘制主歌词（带缩放） =====
+//            val primaryWidth = primaryLayout.width.toFloat()
+            val primaryHeight = primaryLayout.height.toFloat()
 
-            // 主歌词居中
-            canvas.withTranslation(width / 2f, primaryTop) {
-                scale(scale, scale)
-                primaryLayout.draw(this)
+            // 行中心作为缩放中心
+            canvas.save()
+
+            // 1. 移动到缩放中心
+            canvas.translate(centerX, primaryTop)
+            // 2. 缩放
+            if (scale != 1.0f) {
+                canvas.scale(scale, scale)
             }
-//            val primaryLeft = width / 2f - primaryLayout.width / 2f
-//            canvas.save()
-//            canvas.translate(primaryLeft, primaryTop)
-//            primaryLayout.draw(canvas)
-//            canvas.restore()
+            // 3. 把原点移到 layout 左上角（居中）
+            // 画布向上偏移歌词高度的一半。注意偏移的高度同样会放大，所以不要用放大后的歌词高度进行偏移量计算。
+            canvas.translate(0f, -layout.primaryBaselineOffset)
 
+            // 4. 从 (0,0) 开始绘制主歌词
+            primaryLayout.draw(canvas)
 
-            // 副歌词居中
-            sencondLayout?.let { sec ->
-//                val secondaryLeft = paddingLeft + (width - paddingLeft - paddingRight - sec.width) / 2f
-                val secTop = top + lastHeightFix + layout.primary.height + primarySecondaryGap
+            canvas.restore()
 
-                canvas.withTranslation(width / 2f, secTop) {
-                    sec.draw(this)
-                }
+            // ===== 绘制副歌词（不缩放，跟随主行位置） =====
+            if (secondaryLayout != null) {
+//                val sfm = secondaryLayout.paint.fontMetrics
+//                val secBaselineOffset = -sfm.ascent
+
+                val secTop = primaryTop + primaryHeight + primarySecondaryGap
+
+                canvas.save()
+                canvas.translate(centerX, secTop -layout.primaryBaselineOffset)
+                secondaryLayout.draw(canvas)
+                canvas.restore()
             }
+
+            i++
         }
+
         drawFadeMask(canvas)
     }
 
-    private fun getBackgroundColor(): Int {
-        val drawable = background ?: return Color.BLACK
-
-        return when (drawable) {
-            is ColorDrawable -> drawable.color
-            is GradientDrawable -> {
-                // 如果是 shape/gradient，尝试读取 solidColor
-                drawable.color?.defaultColor ?: Color.BLACK
-            }
-            else -> Color.BLACK
-        }
-    }
-
-    private val fadePaint = Paint()
     /**
      * 淡入淡出遮罩
      * 现在还有边框和背景没有处理，这遮罩还不如不要
      */
     private fun drawFadeMask(canvas: Canvas) {
-        val fadeHeight = dp(48).toInt()
-        val bgColor = getBackgroundColor()
+        val topShader = topFadeShader ?: return
+        val bottomShader = bottomFadeShader ?: return
 
-        // 顶部渐变：背景色 → 透明
-        val topShader = LinearGradient(
-            0f, 0f, 0f, fadeHeight.toFloat(),
-            bgColor, bgColor and 0x00FFFFFF,
-            Shader.TileMode.CLAMP
-        )
         fadePaint.shader = topShader
-        fadePaint.xfermode = null
-        canvas.drawRect(0f, 0f, width.toFloat(), fadeHeight.toFloat(), fadePaint)
+        canvas.drawRect(0f, 0f, width.toFloat(), fadeHeightPx.toFloat(), fadePaint)
 
-        // 底部渐变：透明 → 背景色
-        val bottomShader = LinearGradient(
-            0f, height - fadeHeight.toFloat(), 0f, height.toFloat(),
-            bgColor and 0x00FFFFFF, bgColor,
-            Shader.TileMode.CLAMP
-        )
         fadePaint.shader = bottomShader
-        canvas.drawRect(0f, height - fadeHeight.toFloat(), width.toFloat(), height.toFloat(), fadePaint)
+        canvas.drawRect(
+            0f,
+            (height - fadeHeightPx).toFloat(),
+            width.toFloat(),
+            height.toFloat(),
+            fadePaint
+        )
     }
 
     private var lastClickTime = 0L

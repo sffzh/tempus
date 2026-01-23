@@ -258,6 +258,7 @@ public class QueueRepository {
         try {
             thread.join();
             Queue lastMediaPlayed = getLastPlayedMediaThreadSafe.getQueueItem();
+            if (lastMediaPlayed == null) return 0;
             index = lastMediaPlayed.getTrackOrder();
         } catch (InterruptedException e) {
             Log.e(TAG, "getLastPlayedMediaIndex", e);
@@ -276,6 +277,9 @@ public class QueueRepository {
         try {
             thread.join();
             Queue lastMediaPlayed = getLastPlayedMediaThreadSafe.getQueueItem();
+            if (lastMediaPlayed == null){
+                return 0;
+            }
             timestamp = lastMediaPlayed.getPlayingChanged();
         } catch (InterruptedException e) {
             Log.e(TAG, "getLastPlayedMediaTimestamp", e);

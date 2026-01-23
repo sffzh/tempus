@@ -8,7 +8,6 @@ import android.content.res.Configuration;
 import android.os.Bundle;
 import android.os.IBinder;
 import android.text.TextUtils;
-import android.util.DisplayMetrics;
 import android.util.Log;
 import android.view.LayoutInflater;
 import android.view.View;
@@ -27,7 +26,6 @@ import androidx.constraintlayout.widget.ConstraintLayout;
 import androidx.constraintlayout.widget.ConstraintSet;
 import androidx.fragment.app.Fragment;
 import androidx.lifecycle.ViewModelProvider;
-import androidx.media3.common.C;
 import androidx.media3.common.MediaMetadata;
 import androidx.media3.common.PlaybackParameters;
 import androidx.media3.common.Player;
@@ -35,7 +33,6 @@ import androidx.media3.common.util.RepeatModeUtil;
 import androidx.media3.common.util.UnstableApi;
 import androidx.media3.session.MediaBrowser;
 import androidx.media3.session.SessionToken;
-import androidx.media3.ui.PlayerControlView;
 import androidx.navigation.NavController;
 import androidx.navigation.NavOptions;
 import androidx.navigation.fragment.NavHostFragment;
@@ -357,6 +354,7 @@ public class PlayerControllerFragment extends Fragment {
             constraintSet.setMargin(R.id.player_media_title_label, ConstraintSet.END, 24);
 
             constraintSet.connect(R.id.player_artist_name_label, ConstraintSet.START, R.id.guideline, ConstraintSet.END);
+            constraintSet.connect(R.id.player_artist_name_label, ConstraintSet.TOP, R.id.player_media_title_label, ConstraintSet.BOTTOM);
             constraintSet.connect(R.id.player_artist_name_label, ConstraintSet.BOTTOM, R.id.exo_progress, ConstraintSet.TOP);
 
             constraintSet.connect(R.id.exo_position, ConstraintSet.START, R.id.guideline, ConstraintSet.END);
@@ -368,9 +366,10 @@ public class PlayerControllerFragment extends Fragment {
 
             constraintSet.setVisibility(R.id.player_quick_action_view, View.GONE);
 
-        }else {
+        }else { // 竖屏布局
             constraintSet.create(R.id.guideline, ConstraintSet.HORIZONTAL_GUIDELINE);
-            constraintSet.setGuidelinePercent(R.id.guideline, 0.575f);
+//            constraintSet.setGuidelinePercent(R.id.guideline, 0.575f);
+            constraintSet.setGuidelinePercent(R.id.guideline, 1 - 210.0f/currentHeightDp);
 
             constraintSet.setVisibility(R.id.player_asset_link_row, View.GONE);
             constraintSet.setVisibility(R.id.player_media_quality_sector, View.VISIBLE);
@@ -385,7 +384,8 @@ public class PlayerControllerFragment extends Fragment {
             constraintSet.clear(R.id.player_media_cover_view_pager, ConstraintSet.BOTTOM);
             constraintSet.clear(R.id.player_media_cover_view_pager, ConstraintSet.START);
             constraintSet.clear(R.id.player_media_cover_view_pager, ConstraintSet.END);
-            constraintSet.connect(R.id.player_media_cover_view_pager, ConstraintSet.TOP, R.id.player_media_quality_sector, ConstraintSet.BOTTOM);
+            constraintSet.connect(R.id.player_media_cover_view_pager, ConstraintSet.TOP, R.id.player_media_title_label, ConstraintSet.BOTTOM);
+//            constraintSet.connect(R.id.player_media_cover_view_pager, ConstraintSet.TOP, R.id.player_media_quality_sector, ConstraintSet.BOTTOM);
             constraintSet.connect(R.id.player_media_cover_view_pager, ConstraintSet.BOTTOM, R.id.guideline, ConstraintSet.TOP);
             constraintSet.connect(R.id.player_media_cover_view_pager, ConstraintSet.END, ConstraintSet.PARENT_ID, ConstraintSet.END);
             constraintSet.connect(R.id.player_media_cover_view_pager, ConstraintSet.START, ConstraintSet.PARENT_ID, ConstraintSet.START);
@@ -400,14 +400,16 @@ public class PlayerControllerFragment extends Fragment {
             constraintSet.clear(R.id.player_media_title_label, ConstraintSet.TOP);
             constraintSet.connect(R.id.player_media_title_label, ConstraintSet.END, R.id.button_favorite, ConstraintSet.START);
             constraintSet.connect(R.id.player_media_title_label, ConstraintSet.START, ConstraintSet.PARENT_ID, ConstraintSet.START);
-            constraintSet.connect(R.id.player_media_title_label, ConstraintSet.TOP, R.id.rating_container, ConstraintSet.BOTTOM);
+            constraintSet.connect(R.id.player_media_title_label, ConstraintSet.TOP, R.id.player_media_quality_sector, ConstraintSet.BOTTOM);
+//            constraintSet.connect(R.id.player_media_title_label, ConstraintSet.TOP, R.id.rating_container, ConstraintSet.BOTTOM);
             constraintSet.setMargin(R.id.player_media_title_label, ConstraintSet.TOP, 18);
-            constraintSet.setMargin(R.id.player_media_title_label, ConstraintSet.START, 24);
+            constraintSet.setMargin(R.id.player_media_title_label, ConstraintSet.START, 48);
             constraintSet.setMargin(R.id.player_media_title_label, ConstraintSet.END, 24);
 
             constraintSet.clear(R.id.player_artist_name_label, ConstraintSet.BOTTOM);
             constraintSet.clear(R.id.player_artist_name_label, ConstraintSet.START);
-            constraintSet.connect(R.id.player_artist_name_label, ConstraintSet.TOP, R.id.player_media_title_label, ConstraintSet.BOTTOM);
+            constraintSet.connect(R.id.player_artist_name_label, ConstraintSet.TOP, R.id.rating_container, ConstraintSet.BOTTOM);
+//            constraintSet.connect(R.id.player_artist_name_label, ConstraintSet.TOP, R.id.player_media_title_label, ConstraintSet.BOTTOM);
             constraintSet.connect(R.id.player_artist_name_label, ConstraintSet.START, ConstraintSet.PARENT_ID, ConstraintSet.START);
             constraintSet.setMargin(R.id.player_artist_name_label, ConstraintSet.TOP, 8);
             constraintSet.setMargin(R.id.player_artist_name_label, ConstraintSet.START, 24);
@@ -589,7 +591,7 @@ public class PlayerControllerFragment extends Fragment {
             return null;
         }
 
-        chip.setText(getString(R.string.asset_link_chip_text, label, assetLink.id));
+        chip.setText(getString(R.string.asset_link_chip_text, label, assetLink.id()));
         chip.setVisibility(View.VISIBLE);
 
         chip.setOnClickListener(v -> {
@@ -628,12 +630,12 @@ public class PlayerControllerFragment extends Fragment {
         view.setLongClickable(true);
         AssetLinkUtil.applyLinkAppearance(view);
         view.setOnClickListener(v -> {
-            boolean collapse = !AssetLinkUtil.TYPE_SONG.equals(assetLink.type);
+            boolean collapse = !AssetLinkUtil.TYPE_SONG.equals(assetLink.type());
             activity.openAssetLink(assetLink, collapse);
         });
         view.setOnLongClickListener(v -> {
             AssetLinkUtil.copyToClipboard(requireContext(), assetLink);
-            Toast.makeText(requireContext(), getString(R.string.asset_link_copied_toast, assetLink.id), Toast.LENGTH_SHORT).show();
+            Toast.makeText(requireContext(), getString(R.string.asset_link_copied_toast, assetLink.id()), Toast.LENGTH_SHORT).show();
             return true;
         });
     }
@@ -728,6 +730,7 @@ public class PlayerControllerFragment extends Fragment {
     private void initMediaListenable() {
         playerBottomSheetViewModel.getLiveMedia().observe(getViewLifecycleOwner(), media -> {
             if (media != null) {
+                Log.d(TAG, "observeLiveMedia in playerBottomSheetViewModel");
                 ratingViewModel.setSong(media);
                 buttonFavorite.setChecked(media.getStarred() != null);
                 buttonFavorite.setOnClickListener(v -> playerBottomSheetViewModel.setFavorite(requireContext(), media));
@@ -745,19 +748,12 @@ public class PlayerControllerFragment extends Fragment {
 
                 Integer currentRating = media.getUserRating();
 
-                if (currentRating != null) {
-                    songRatingBar.setRating(currentRating);
-                } else {
-                    songRatingBar.setRating(0);
-                }
+                songRatingBar.setRating(Objects.requireNonNullElse(currentRating, 0));
 
-                songRatingBar.setOnRatingBarChangeListener(new RatingBar.OnRatingBarChangeListener() {
-                    @Override
-                    public void onRatingChanged(RatingBar ratingBar, float rating, boolean fromUser) {
-                        if (fromUser) {
-                            ratingViewModel.rate((int) rating);
-                            media.setUserRating((int) rating);
-                        }
+                songRatingBar.setOnRatingBarChangeListener((ratingBar, rating, fromUser) -> {
+                    if (fromUser) {
+                        ratingViewModel.rate((int) rating);
+                        media.setUserRating((int) rating);
                     }
                 });
 

@@ -1,6 +1,7 @@
 package com.cappielloantonio.tempo.service;
 
 import android.content.ComponentName;
+import android.os.Build;
 import android.os.Bundle;
 import android.os.Handler;
 import android.os.Looper;
@@ -9,6 +10,7 @@ import android.util.Log;
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
 import androidx.annotation.OptIn;
+import androidx.core.os.BundleCompat;
 import androidx.lifecycle.LiveData;
 import androidx.lifecycle.Observer;
 import androidx.media3.common.MediaItem;
@@ -53,11 +55,13 @@ public class MediaManager {
     private static final ExecutorService backgroundExecutor = Executors.newSingleThreadExecutor();
 
     public static List<Child> getTracks(Bundle bundle){
-        return bundle.getParcelableArrayList(Constants.TRACKS_OBJECT, Child.class);
+        if (bundle == null)return null;
+        return BundleCompat.getParcelableArrayList(bundle, Constants.TRACKS_OBJECT, Child.class);
     }
 
     public static Child getTrackItem(Bundle bundle) {
-        ArrayList<Child> parcelableArrayList = bundle.getParcelableArrayList(Constants.TRACKS_OBJECT, Child.class);
+        if (bundle == null)return null;
+        ArrayList<Child> parcelableArrayList = BundleCompat.getParcelableArrayList(bundle, Constants.TRACKS_OBJECT, Child.class);
         if (parcelableArrayList != null){
             return parcelableArrayList.get(bundle.getInt(Constants.ITEM_POSITION));
         }
@@ -78,6 +82,7 @@ public class MediaManager {
                     browser.addListener(new Player.Listener() {
                         @Override
                         public void onEvents(@NonNull Player player, @NonNull Player.Events events) {
+                            Log.d(TAG, "onEvent start, events = " + events);
                             if (events.contains(Player.EVENT_MEDIA_ITEM_TRANSITION)
                                     || events.contains(Player.EVENT_PLAY_WHEN_READY_CHANGED)
                                     || events.contains(Player.EVENT_PLAYBACK_STATE_CHANGED)) {
@@ -180,6 +185,44 @@ public class MediaManager {
                 }
             }, MoreExecutors.directExecutor());
         }
+    }
+
+    public static MediaBrowserHandler checkHandler(ListenableFuture<MediaBrowser> mediaBrowserListenableFuture){
+        return (f, browser)->{
+            if (browser.getMediaItemCount() < 1) {
+                new Handler(Looper.getMainLooper()).post(() -> {
+                    List<Child> media = getQueueRepository().getMedia();
+                    if (media != null && !media.isEmpty()) {
+                        init(mediaBrowserListenableFuture, media);
+                    }
+                });
+            }
+        };
+    }
+
+    public static void checkAsync(ListenableFuture<MediaBrowser> mediaBrowserListenableFuture){
+        Log.d(TAG, "checkAsync is starting.");
+        addListener(mediaBrowserListenableFuture, (f, browser) -> {
+            Log.d(TAG, "checkAsync listener is added.browser.getMediaItemCount() =" + browser.getMediaItemCount() );
+            if (browser.getMediaItemCount() < 1) {
+                // 1. 先在后台线程查询数据库
+                backgroundExecutor.execute(() -> {
+                    List<Child> media = getQueueRepository().getMedia();
+                    int lastIndex = getQueueRepository().getLastPlayedMediaIndex();
+                    long lastPos = getQueueRepository().getLastPlayedMediaTimestamp();
+                    // 2. 查询完后再切回主线程更新播放器
+                    if (media != null && !media.isEmpty()) {
+                        List<MediaItem> mediaItems = MappingUtil.mapMediaItems(media);
+                        new Handler(Looper.getMainLooper()).post(() -> {
+                            browser.setMediaItems(mediaItems);
+                            browser.seekTo(lastIndex, lastPos);
+                            browser.prepare();
+                            Log.d(TAG, "brower is prepared.");
+                        });
+                    }
+                });
+            }
+        });
     }
 
     public static void init(ListenableFuture<MediaBrowser> mediaBrowserListenableFuture, List<Child> media) {

@@ -4,7 +4,6 @@ import android.content.ComponentName;
 import android.content.Intent;
 import android.net.Uri;
 import android.os.Bundle;
-import android.util.Log;
 import android.view.LayoutInflater;
 import android.view.Menu;
 import android.view.MenuInflater;
@@ -200,7 +199,7 @@ public class AlbumPageFragment extends Fragment implements ClickCallback {
                 bind.albumArtistLabel.setOnLongClickListener(v -> {
                     if (artistLink != null) {
                         AssetLinkUtil.copyToClipboard(requireContext(), artistLink);
-                        Toast.makeText(requireContext(), getString(R.string.asset_link_copied_toast, artistLink.id), Toast.LENGTH_SHORT).show();
+                        Toast.makeText(requireContext(), getString(R.string.asset_link_copied_toast, artistLink.id()), Toast.LENGTH_SHORT).show();
                         return true;
                     }
                     return false;
@@ -214,7 +213,7 @@ public class AlbumPageFragment extends Fragment implements ClickCallback {
                         AssetLinkUtil.AssetLink yearLink = buildYearLink(album.getYear());
                         if (yearLink != null) {
                             AssetLinkUtil.copyToClipboard(requireContext(), yearLink);
-                            Toast.makeText(requireContext(), getString(R.string.asset_link_copied_toast, yearLink.id), Toast.LENGTH_SHORT).show();
+                            Toast.makeText(requireContext(), getString(R.string.asset_link_copied_toast, yearLink.id()), Toast.LENGTH_SHORT).show();
                         }
                         return true;
                     });

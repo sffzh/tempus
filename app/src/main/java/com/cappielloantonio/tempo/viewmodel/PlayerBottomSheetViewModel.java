@@ -152,6 +152,8 @@ public class PlayerBottomSheetViewModel extends AndroidViewModel {
     }
 
     public void refreshMediaInfo(LifecycleOwner owner, Child media) {
+        Log.d(TAG, "Refreshing media info started");
+
         lyricsLiveData.postValue(null);
         lyricsListLiveData.postValue(null);
         lyricsCachedLiveData.postValue(false);
@@ -182,7 +184,8 @@ public class PlayerBottomSheetViewModel extends AndroidViewModel {
                 lyricsListLiveData.postValue(lyricsList);
                 lyricsLiveData.postValue(null);
 
-                if (shouldAutoDownloadLyrics() && hasStructuredLyrics(lyricsList)) {
+                if (shouldAutoDownloadLyrics() &&
+                        LyricsList.hasStructuredLyrics(lyricsList)) {
                     saveLyricsToCache(media, null, lyricsList);
                 }
             });
@@ -343,7 +346,7 @@ public class PlayerBottomSheetViewModel extends AndroidViewModel {
             return;
         }
 
-        if ((lyricsList == null || !hasStructuredLyrics(lyricsList)) && TextUtils.isEmpty(lyrics)) {
+        if (!LyricsList.hasStructuredLyrics(lyricsList) && TextUtils.isEmpty(lyrics)) {
             return;
         }
 
@@ -352,7 +355,7 @@ public class PlayerBottomSheetViewModel extends AndroidViewModel {
         lyricsCache.setTitle(media.getTitle());
         lyricsCache.setUpdatedAt(System.currentTimeMillis());
 
-        if (lyricsList != null && hasStructuredLyrics(lyricsList)) {
+        if (LyricsList.hasStructuredLyrics(lyricsList)) {
             lyricsCache.setStructuredLyrics(gson.toJson(lyricsList));
             lyricsCache.setLyrics(null);
         } else {
@@ -362,15 +365,6 @@ public class PlayerBottomSheetViewModel extends AndroidViewModel {
 
         lyricsRepository.insert(lyricsCache);
         lyricsCachedLiveData.postValue(true);
-    }
-
-    private boolean hasStructuredLyrics(LyricsList lyricsList) {
-        return lyricsList != null
-                && lyricsList.getStructuredLyrics() != null
-                && !lyricsList.getStructuredLyrics().isEmpty()
-                && lyricsList.getStructuredLyrics().get(0) != null
-                && lyricsList.getStructuredLyrics().get(0).getLine() != null
-                && !lyricsList.getStructuredLyrics().get(0).getLine().isEmpty();
     }
 
     private boolean shouldAutoDownloadLyrics() {
@@ -386,7 +380,7 @@ public class PlayerBottomSheetViewModel extends AndroidViewModel {
         LyricsList lyricsList = lyricsListLiveData.getValue();
         String lyrics = lyricsLiveData.getValue();
 
-        if ((lyricsList == null || !hasStructuredLyrics(lyricsList)) && TextUtils.isEmpty(lyrics)) {
+        if ((!LyricsList.hasStructuredLyrics(lyricsList)) && TextUtils.isEmpty(lyrics)) {
             return false;
         }
 

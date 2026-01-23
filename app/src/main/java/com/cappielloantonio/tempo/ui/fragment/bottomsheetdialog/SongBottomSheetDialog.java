@@ -338,7 +338,7 @@ public class SongBottomSheetDialog extends BottomSheetDialogFragment implements 
             return null;
         }
 
-        chip.setText(getString(R.string.asset_link_chip_text, label, assetLink.id));
+        chip.setText(getString(R.string.asset_link_chip_text, label, assetLink.id()));
         chip.setVisibility(View.VISIBLE);
 
         chip.setOnClickListener(v -> {
@@ -389,10 +389,10 @@ public class SongBottomSheetDialog extends BottomSheetDialogFragment implements 
         view.setClickable(true);
         view.setLongClickable(true);
         AssetLinkUtil.applyLinkAppearance(view);
-        view.setOnClickListener(v -> ((MainActivity) requireActivity()).openAssetLink(assetLink, !AssetLinkUtil.TYPE_SONG.equals(assetLink.type)));
+        view.setOnClickListener(v -> ((MainActivity) requireActivity()).openAssetLink(assetLink, !AssetLinkUtil.TYPE_SONG.equals(assetLink.type())));
         view.setOnLongClickListener(v -> {
             AssetLinkUtil.copyToClipboard(requireContext(), assetLink);
-            Toast.makeText(requireContext(), getString(R.string.asset_link_copied_toast, assetLink.id), Toast.LENGTH_SHORT).show();
+            Toast.makeText(requireContext(), getString(R.string.asset_link_copied_toast, assetLink.id()), Toast.LENGTH_SHORT).show();
             return true;
         });
     }

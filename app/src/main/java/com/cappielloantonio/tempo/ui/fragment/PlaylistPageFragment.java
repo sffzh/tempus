@@ -3,6 +3,7 @@ package com.cappielloantonio.tempo.ui.fragment;
 import android.content.ComponentName;
 import android.content.Context;
 import android.os.Bundle;
+import android.util.Log;
 import android.view.LayoutInflater;
 import android.view.Menu;
 import android.view.MenuInflater;
@@ -12,6 +13,10 @@ import android.view.ViewGroup;
 import android.view.inputmethod.EditorInfo;
 import android.view.inputmethod.InputMethodManager;
 import android.widget.SearchView;
+
+import androidx.core.view.MenuProvider;
+import androidx.fragment.app.FragmentActivity;
+import androidx.lifecycle.Lifecycle;
 
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
@@ -49,46 +54,18 @@ import java.util.stream.Collectors;
 
 @UnstableApi
 public class PlaylistPageFragment extends Fragment implements ClickCallback {
+    private static final String TAG = "PlaylistPageFragment";
     private FragmentPlaylistPageBinding bind;
     private MainActivity activity;
     private PlaylistPageViewModel playlistPageViewModel;
     private PlaybackViewModel playbackViewModel;
-
     private SongHorizontalAdapter songHorizontalAdapter;
-
     private ListenableFuture<MediaBrowser> mediaBrowserListenableFuture;
 
     @Override
     public void onCreate(@Nullable Bundle savedInstanceState) {
         super.onCreate(savedInstanceState);
-        setHasOptionsMenu(true);
-    }
-
-    @Override
-    public void onCreateOptionsMenu(@NonNull Menu menu, @NonNull MenuInflater inflater) {
-        inflater.inflate(R.menu.playlist_page_menu, menu);
-
-        MenuItem searchItem = menu.findItem(R.id.action_search);
-
-        SearchView searchView = (SearchView) searchItem.getActionView();
-        searchView.setImeOptions(EditorInfo.IME_ACTION_DONE);
-        searchView.setOnQueryTextListener(new SearchView.OnQueryTextListener() {
-            @Override
-            public boolean onQueryTextSubmit(String query) {
-                searchView.clearFocus();
-                return false;
-            }
-
-            @Override
-            public boolean onQueryTextChange(String newText) {
-                songHorizontalAdapter.getFilter().filter(newText);
-                return false;
-            }
-        });
-
-        searchView.setPadding(-32, 0, 0, 0);
-
-        initMenuOption(menu);
+//        setHasOptionsMenu(true);
     }
 
     @Override
@@ -107,6 +84,95 @@ public class PlaylistPageFragment extends Fragment implements ClickCallback {
         initSongsView();
 
         return view;
+    }
+
+    @Override
+    public void onViewCreated(@NonNull View view, @Nullable Bundle savedInstanceState) {
+        super.onViewCreated(view, savedInstanceState);
+        // 使用新的 MenuProvider API
+        FragmentActivity activity = super.requireActivity();
+        activity.addMenuProvider(menuProvider, getViewLifecycleOwner(), Lifecycle.State.RESUMED);
+        // 新增：观察数据变化，触发菜单刷新
+        playlistPageViewModel.isPinned(getViewLifecycleOwner()).observe(
+                getViewLifecycleOwner(),
+                isPinned -> {
+                    activity.invalidateMenu(); // 这会重新触发 onCreateMenu/onPrepareMenu
+                });
+    }
+
+    private final MenuProvider menuProvider = new MenuProvider() {
+        @Override
+        public void onCreateMenu(@NonNull Menu menu, @NonNull MenuInflater menuInflater) {
+            menuInflater.inflate(R.menu.playlist_page_menu, menu);
+
+            MenuItem searchItem = menu.findItem(R.id.action_search);
+            SearchView searchView = (SearchView) searchItem.getActionView();
+            assert searchView != null;
+            searchView.setImeOptions(EditorInfo.IME_ACTION_DONE);
+            searchView.setOnQueryTextListener(new SearchView.OnQueryTextListener() {
+                @Override
+                public boolean onQueryTextSubmit(String query) {
+                    searchView.clearFocus();
+                    return false;
+                }
+
+                @Override
+                public boolean onQueryTextChange(String newText) {
+                    if (songHorizontalAdapter != null) {
+                        songHorizontalAdapter.getFilter().filter(newText);
+                    }
+                    return false;
+                }
+            });
+
+            searchView.setPadding(-32, 0, 0, 0);
+        }
+
+        @Override
+        public void onPrepareMenu(@NonNull Menu menu) {
+            // 专门处理动态显示的逻辑
+            initMenuOption(menu);
+        }
+
+        @Override
+        public boolean onMenuItemSelected(@NonNull MenuItem menuItem) {
+            int itemId = menuItem.getItemId();
+            if (itemId == R.id.action_download_playlist) {
+                downloadPlaylist(); // 提取出的下载逻辑
+                return true;
+            } else if (itemId == R.id.action_pin_playlist) {
+                playlistPageViewModel.setPinned(true);
+                return true;
+            } else if (itemId == R.id.action_unpin_playlist) {
+                playlistPageViewModel.setPinned(false);
+                return true;
+            } else if (itemId == android.R.id.home) {
+                activity.navController.navigateUp();
+                return true;
+            }
+            return false;
+        }
+    };
+
+    // 将复杂的下载逻辑提取出来
+    private void downloadPlaylist() {
+        playlistPageViewModel.getPlaylistSongLiveList().observe(getViewLifecycleOwner(), songs -> {
+            if (isVisible() && getActivity() != null) {
+                if (Preferences.getDownloadDirectoryUri() == null) {
+                    DownloadUtil.getDownloadTracker(requireContext()).download(
+                            MappingUtil.mapDownloads(songs),
+                            songs.stream().map(child -> {
+                                Download toDownload = new Download(child);
+                                toDownload.setPlaylistId(playlistPageViewModel.getPlaylist().getId());
+                                toDownload.setPlaylistName(playlistPageViewModel.getPlaylist().getName());
+                                return toDownload;
+                            }).collect(Collectors.toList())
+                    );
+                } else {
+                    songs.forEach(child -> ExternalAudioWriter.downloadToUserDirectory(requireContext(), child));
+                }
+            }
+        });
     }
 
     @Override
@@ -137,47 +203,25 @@ public class PlaylistPageFragment extends Fragment implements ClickCallback {
         bind = null;
     }
 
-    @Override
-    public boolean onOptionsItemSelected(@NonNull MenuItem item) {
-        if (item.getItemId() == R.id.action_download_playlist) {
-            playlistPageViewModel.getPlaylistSongLiveList().observe(getViewLifecycleOwner(), songs -> {
-                if (isVisible() && getActivity() != null) {
-                    if (Preferences.getDownloadDirectoryUri() == null) {
-                        DownloadUtil.getDownloadTracker(requireContext()).download(
-                            MappingUtil.mapDownloads(songs),
-                            songs.stream().map(child -> {
-                                Download toDownload = new Download(child);
-                                toDownload.setPlaylistId(playlistPageViewModel.getPlaylist().getId());
-                                toDownload.setPlaylistName(playlistPageViewModel.getPlaylist().getName());
-                                return toDownload;
-                            }).collect(Collectors.toList())
-                        );
-                    } else {
-                        songs.forEach(child -> ExternalAudioWriter.downloadToUserDirectory(requireContext(), child));
-                    }
-                }
-            });
-            return true;
-        } else if (item.getItemId() == R.id.action_pin_playlist) {
-            playlistPageViewModel.setPinned(true);
-            return true;
-        } else if (item.getItemId() == R.id.action_unpin_playlist) {
-            playlistPageViewModel.setPinned(false);
-            return true;
-        }
-
-        return false;
-    }
-
     private void init() {
         playlistPageViewModel.setPlaylist(requireArguments().getParcelable(Constants.PLAYLIST_OBJECT));
     }
 
     private void initMenuOption(Menu menu) {
-        playlistPageViewModel.isPinned(getViewLifecycleOwner()).observe(getViewLifecycleOwner(), isPinned -> {
-            menu.findItem(R.id.action_unpin_playlist).setVisible(isPinned);
-            menu.findItem(R.id.action_pin_playlist).setVisible(!isPinned);
-        });
+        // 1. 获取当前缓存的值，而不是设置观察者
+        Boolean isPinned = playlistPageViewModel.isPinned(getViewLifecycleOwner()).getValue();
+        if (isPinned == null) return;
+
+        // 2. 增加空检查，防止菜单项尚未加载或已被移除
+        MenuItem unpinItem = menu.findItem(R.id.action_unpin_playlist);
+        MenuItem pinItem = menu.findItem(R.id.action_pin_playlist);
+
+        if (unpinItem != null) {
+            unpinItem.setVisible(isPinned);
+        }
+        if (pinItem != null) {
+            pinItem.setVisible(!isPinned);
+        }
     }
 
     private void initAppBar() {
@@ -268,9 +312,13 @@ public class PlaylistPageFragment extends Fragment implements ClickCallback {
         bind.songRecyclerView.setAdapter(songHorizontalAdapter);
         setMediaBrowserListenableFuture();
         reapplyPlayback();
-
+        Log.d(TAG, "initSongsView");
+        bind.getRoot().findViewById(R.id.playlist_page_button_layout).setVisibility(View.GONE);
+//        playlist_page_button_layout
         playlistPageViewModel.getPlaylistSongLiveList().observe(getViewLifecycleOwner(), songs -> {
+            Log.d(TAG, "getPlaylistSongLiveList finished");
             songHorizontalAdapter.setItems(songs);
+            bind.getRoot().findViewById(R.id.playlist_page_button_layout).setVisibility(View.VISIBLE);
             reapplyPlayback();
         });
     }
@@ -312,8 +360,7 @@ public class PlaylistPageFragment extends Fragment implements ClickCallback {
     private void reapplyPlayback() {
         if (songHorizontalAdapter != null) {
             String id = playbackViewModel.getCurrentSongId().getValue();
-            Boolean playing = playbackViewModel.getIsPlaying().getValue();
-            songHorizontalAdapter.setPlaybackState(id, playing != null && playing);
+            songHorizontalAdapter.setPlaybackState(id, playbackViewModel.isPlaying());
         }
     }
 

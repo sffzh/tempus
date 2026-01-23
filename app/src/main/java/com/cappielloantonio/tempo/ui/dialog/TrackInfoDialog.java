@@ -191,12 +191,12 @@ public class TrackInfoDialog extends DialogFragment {
         AssetLinkUtil.applyLinkAppearance(view);
         view.setOnClickListener(v -> {
             dismissAllowingStateLoss();
-            boolean collapse = !AssetLinkUtil.TYPE_SONG.equals(assetLink.type);
+            boolean collapse = !AssetLinkUtil.TYPE_SONG.equals(assetLink.type());
             ((com.cappielloantonio.tempo.ui.activity.MainActivity) requireActivity()).openAssetLink(assetLink, collapse);
         });
         view.setOnLongClickListener(v -> {
             AssetLinkUtil.copyToClipboard(requireContext(), assetLink);
-            Toast.makeText(requireContext(), getString(R.string.asset_link_copied_toast, assetLink.id), Toast.LENGTH_SHORT).show();
+            Toast.makeText(requireContext(), getString(R.string.asset_link_copied_toast, assetLink.id()), Toast.LENGTH_SHORT).show();
             return true;
         });
     }

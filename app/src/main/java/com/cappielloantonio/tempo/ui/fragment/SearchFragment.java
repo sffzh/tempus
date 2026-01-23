@@ -13,6 +13,7 @@ import android.widget.TextView;
 
 import androidx.annotation.NonNull;
 import androidx.annotation.Nullable;
+import androidx.core.content.res.ResourcesCompat;
 import androidx.fragment.app.Fragment;
 import androidx.lifecycle.ViewModelProvider;
 import androidx.media3.common.util.UnstableApi;
@@ -27,7 +28,6 @@ import com.cappielloantonio.tempo.helper.recyclerview.CustomLinearSnapHelper;
 import com.cappielloantonio.tempo.interfaces.ClickCallback;
 import com.cappielloantonio.tempo.service.MediaManager;
 import com.cappielloantonio.tempo.service.MediaService;
-import com.cappielloantonio.tempo.subsonic.models.Child;
 import com.cappielloantonio.tempo.ui.activity.MainActivity;
 import com.cappielloantonio.tempo.ui.adapter.AlbumAdapter;
 import com.cappielloantonio.tempo.ui.adapter.ArtistAdapter;
@@ -38,7 +38,6 @@ import com.cappielloantonio.tempo.viewmodel.PlaybackViewModel;
 import com.cappielloantonio.tempo.viewmodel.SearchViewModel;
 import com.google.common.util.concurrent.ListenableFuture;
 
-import java.util.Arrays;
 import java.util.Collections;
 
 @UnstableApi
@@ -182,7 +181,7 @@ public class SearchFragment extends Fragment implements ClickCallback {
             TextView titleView = view.findViewById(R.id.search_suggestion_title);
             ImageView tailingImageView = view.findViewById(R.id.search_suggestion_delete_icon);
 
-            leadingImageView.setImageDrawable(getResources().getDrawable(R.drawable.ic_history, null));
+            leadingImageView.setImageDrawable(ResourcesCompat.getDrawable(getResources(), R.drawable.ic_history, null));
             titleView.setText(suggestion);
 
             view.setOnClickListener(v -> search(suggestion));
@@ -207,7 +206,7 @@ public class SearchFragment extends Fragment implements ClickCallback {
                 TextView titleView = view.findViewById(R.id.search_suggestion_title);
                 ImageView tailingImageView = view.findViewById(R.id.search_suggestion_delete_icon);
 
-                leadingImageView.setImageDrawable(getResources().getDrawable(R.drawable.ic_search, null));
+                leadingImageView.setImageDrawable(ResourcesCompat.getDrawable(getResources(), R.drawable.ic_search, null));
                 titleView.setText(suggestion);
                 tailingImageView.setVisibility(View.GONE);
 
@@ -280,7 +279,9 @@ public class SearchFragment extends Fragment implements ClickCallback {
         }else{
             MediaManager.enqueue(mediaBrowserListenableFuture, MediaManager.getTrackItem(bundle), true, true);
         }
-        songHorizontalAdapter.notifyDataSetChanged();
+        //以下这行删除了似乎完全没有影响。先删除掉吧
+//        songHorizontalAdapter.notifyDataSetChanged();
+        Log.d(TAG, "onMediaClick");
         activity.setBottomSheetInPeek(true);
     }
 

@@ -94,6 +94,12 @@ public class BaseActivity extends AppCompatActivity {
     }
 
     public ListenableFuture<MediaBrowser> getMediaBrowserListenableFuture() {
+        if (mediaBrowserListenableFuture == null) {
+            mediaBrowserListenableFuture = new MediaBrowser.Builder(
+                    this,
+                    new SessionToken(this, new ComponentName(this, MediaService.class))
+            ).buildAsync();
+        }
         return mediaBrowserListenableFuture;
     }
 

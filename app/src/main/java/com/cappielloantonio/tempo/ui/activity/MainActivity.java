@@ -48,10 +48,11 @@ import com.cappielloantonio.tempo.viewmodel.MainViewModel;
 import com.google.android.material.bottomnavigation.BottomNavigationView;
 import com.google.android.material.bottomsheet.BottomSheetBehavior;
 import com.google.android.material.color.DynamicColors;
+import com.google.common.util.concurrent.FutureCallback;
+import com.google.common.util.concurrent.Futures;
 import com.google.common.util.concurrent.MoreExecutors;
 
 import java.util.Objects;
-import java.util.concurrent.ExecutionException;
 
 @UnstableApi
 public class MainActivity extends BaseActivity {
@@ -274,37 +275,65 @@ public class MainActivity extends BaseActivity {
     }
 
     private void initService() {
-        MediaManager.check(getMediaBrowserListenableFuture());
+        MediaManager.checkAsync(getMediaBrowserListenableFuture());
 
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.P) {
-            getMediaBrowserListenableFuture().addListener(() -> {
-                try {
-                    // 获取 MediaBrowser 实例
-                    MediaBrowser browser = getMediaBrowserListenableFuture().get();
-                    if (browser != null) {
-
-
-                        autoPlay(browser);
-                        browser.addListener(new Player.Listener() {
-                            @Override
-                            public void onIsPlayingChanged(boolean isPlaying) {
-                                if (isPlaying && bottomSheetBehavior.getState() == BottomSheetBehavior.STATE_HIDDEN) {
-                                    setBottomSheetInPeek(true);
+            Futures.addCallback(getMediaBrowserListenableFuture(), new FutureCallback<MediaBrowser>() {
+                @Override
+                public void onSuccess(MediaBrowser browser) {
+                    // 确保 UI 操作在主线程，非 UI 操作在后台
+                    runOnUiThread(() -> {
+                        Log.d(TAG, "init_service: init BottomSheetListener");
+                        if (browser != null && browser.isConnected()) {
+                            autoPlay(browser);
+                            browser.addListener(new Player.Listener() {
+                                @Override
+                                public void onIsPlayingChanged(boolean isPlaying) {
+                                    Log.d(TAG, "init_service: onIsPlayingChanged");
+                                    if (isPlaying && bottomSheetBehavior.getState() == BottomSheetBehavior.STATE_HIDDEN) {
+                                        setBottomSheetInPeek(true);
+                                    }
+                                    Log.d(TAG, "init_service: onIsPlayingChanged:setBottomSheetInPeek");
                                 }
-                            }
-                        });
-
-                    }
-
-
-                } catch (ExecutionException e) {
-                    Log.e(TAG, "MediaBrowser execution failed", e);
-                } catch (InterruptedException e) {
-                    Log.e(TAG, "MediaBrowser initialization interrupted", e);
-                    // 重新设置中断状态，以便调用栈更高层的代码知道线程已被中断
-                    Thread.currentThread().interrupt();
+                            });
+                        }
+                        Log.d(TAG, "init_service: init BottomSheetListener. END");
+                    });
                 }
-            }, getMainExecutor());
+                @Override
+                public void onFailure(@NonNull Throwable t) {
+                    Log.e(TAG,"initService", t);
+                }
+            }, MoreExecutors.directExecutor());
+//
+//            getMediaBrowserListenableFuture().addListener(() -> {
+//                try {
+//                    // 获取 MediaBrowser 实例
+//                    MediaBrowser browser = getMediaBrowserListenableFuture().get();
+//                    if (browser != null) {
+//
+//
+//                        autoPlay(browser);
+//                        browser.addListener(new Player.Listener() {
+//                            @Override
+//                            public void onIsPlayingChanged(boolean isPlaying) {
+//                                if (isPlaying && bottomSheetBehavior.getState() == BottomSheetBehavior.STATE_HIDDEN) {
+//                                    setBottomSheetInPeek(true);
+//                                }
+//                            }
+//                        });
+//
+//                    }
+//
+//
+//                } catch (ExecutionException e) {
+//                    Log.e(TAG, "MediaBrowser execution failed", e);
+//                } catch (InterruptedException e) {
+//                    Log.e(TAG, "MediaBrowser initialization interrupted", e);
+//                    // 重新设置中断状态，以便调用栈更高层的代码知道线程已被中断
+//                    Thread.currentThread().interrupt();
+//                }
+//            }, getMainExecutor());
         }
     }
 
@@ -317,14 +346,15 @@ public class MainActivity extends BaseActivity {
         if (browser == null || !browser.isConnected()) return;
 
         new Handler(Looper.getMainLooper()).postDelayed(() -> {
-            if (isFinishing() || isDestroyed() || !browser.isConnected()) {
-                return;
-            }
             try {
+                if (isFinishing() || isDestroyed() || !browser.isConnected()) {
+                    return;
+                }
                 Log.d(TAG, "MediaBrowser about to auto-start");
                 if (browser.getMediaItemCount() > 0) {
                     browser.play();
                 }
+                Log.d(TAG, "MediaBrowser started");
             } catch (Throwable e) {
                 Log.e(TAG, "Auto-play failed", e);
             }
@@ -357,7 +387,8 @@ public class MainActivity extends BaseActivity {
     }
 
     public void goFromLogin() {
-        setBottomSheetInPeek(mainViewModel.isQueueLoaded());
+        setBottomSheetInPeek(true);
+//        setBottomSheetInPeek(mainViewModel.isQueueLoaded());
         goToHome();
         consumePendingAssetLink();
     }
@@ -435,6 +466,7 @@ public class MainActivity extends BaseActivity {
                     Preferences.setServerSwitchableTimer();
                     Preferences.switchInUseServerAddress();
                     App.refreshSubsonicClient();
+                    Log.w(TAG, "pingServer - server reponse is null");
                     pingServer();
                     resetView();
                 } else {
@@ -446,6 +478,7 @@ public class MainActivity extends BaseActivity {
                 Preferences.setServerSwitchableTimer();
                 Preferences.switchInUseServerAddress();
                 App.refreshSubsonicClient();
+                Log.w(TAG, "refreshSubsonicClient");
                 pingServer();
                 resetView();
             } else {
@@ -513,10 +546,12 @@ public class MainActivity extends BaseActivity {
     }
 
     private void consumePendingPlaybackIntent() {
+        Log.d(TAG, "consumePendingPlaybackIntent, pendingDownloadPlaybackIntent=" + pendingDownloadPlaybackIntent);
         if (pendingDownloadPlaybackIntent == null) return;
         Intent intent = pendingDownloadPlaybackIntent;
         pendingDownloadPlaybackIntent = null;
         playDownloadedMedia(intent);
+        Log.d(TAG, "consumePendingPlaybackIntent.END");
     }
 
     private void handleAssetLinkIntent(Intent intent) {

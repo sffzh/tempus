@@ -2,7 +2,7 @@ package com.cappielloantonio.tempo.subsonic.api.podcast;
 
 import android.util.Log;
 
-import com.cappielloantonio.tempo.subsonic.RetrofitClient;
+import com.cappielloantonio.tempo.subsonic.RetrofitManager;
 import com.cappielloantonio.tempo.subsonic.Subsonic;
 import com.cappielloantonio.tempo.subsonic.base.ApiResponse;
 
@@ -16,7 +16,7 @@ public class PodcastClient {
 
     public PodcastClient(Subsonic subsonic) {
         this.subsonic = subsonic;
-        this.podcastService = new RetrofitClient(subsonic).getRetrofit().create(PodcastService.class);
+        this.podcastService = RetrofitManager.createService(subsonic.getUrl(),PodcastService.class);
     }
 
     public Call<ApiResponse> getPodcasts(boolean includeEpisodes, String channelId) {

@@ -19,6 +19,10 @@ public class PlaybackViewModel extends ViewModel {
         return isPlaying;
     }
 
+    public boolean isPlaying() {
+        return isPlaying.getValue() != null && isPlaying.getValue();
+    }
+
     public void update(String songId, boolean playing) {
         if (!Objects.equals(currentSongId.getValue(), songId)) {
             currentSongId.postValue(songId);

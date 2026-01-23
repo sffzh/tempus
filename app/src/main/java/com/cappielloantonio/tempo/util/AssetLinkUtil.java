@@ -65,26 +65,20 @@ public final class AssetLinkUtil {
             return null;
         }
 
-        if (!isSupportedType(type)) {
+        if (isUnsupportedType(type)) {
             return null;
         }
 
         return new AssetLink(type, id, uri);
     }
 
-    public static boolean isSupportedType(@Nullable String type) {
-        if (type == null) return false;
-        switch (type) {
-            case TYPE_SONG:
-            case TYPE_ALBUM:
-            case TYPE_ARTIST:
-            case TYPE_PLAYLIST:
-            case TYPE_GENRE:
-            case TYPE_YEAR:
-                return true;
-            default:
-                return false;
-        }
+    public static boolean isUnsupportedType(@Nullable String type) {
+        if (type == null) return true;
+        //注意返回的是不支持类型
+        return switch (type) {
+            case TYPE_SONG, TYPE_ALBUM, TYPE_ARTIST, TYPE_PLAYLIST, TYPE_GENRE, TYPE_YEAR -> false;
+            default -> true;
+        };
     }
 
     @NonNull
@@ -99,7 +93,7 @@ public final class AssetLinkUtil {
 
     @Nullable
     public static String buildLink(@Nullable String type, @Nullable String id) {
-        if (TextUtils.isEmpty(type) || TextUtils.isEmpty(id) || !isSupportedType(type)) {
+        if (TextUtils.isEmpty(type) || TextUtils.isEmpty(id) || isUnsupportedType(type)) {
             return null;
         }
         return buildUri(Objects.requireNonNull(type), Objects.requireNonNull(id)).toString();
@@ -130,59 +124,46 @@ public final class AssetLinkUtil {
 
     @StringRes
     public static int getLabelRes(@NonNull String type) {
-        switch (type) {
-            case TYPE_SONG:
-                return R.string.asset_link_label_song;
-            case TYPE_ALBUM:
-                return R.string.asset_link_label_album;
-            case TYPE_ARTIST:
-                return R.string.asset_link_label_artist;
-            case TYPE_PLAYLIST:
-                return R.string.asset_link_label_playlist;
-            case TYPE_GENRE:
-                return R.string.asset_link_label_genre;
-            case TYPE_YEAR:
-                return R.string.asset_link_label_year;
-            default:
-                return R.string.asset_link_label_unknown;
-        }
+        return switch (type) {
+            case TYPE_SONG -> R.string.asset_link_label_song;
+            case TYPE_ALBUM -> R.string.asset_link_label_album;
+            case TYPE_ARTIST -> R.string.asset_link_label_artist;
+            case TYPE_PLAYLIST -> R.string.asset_link_label_playlist;
+            case TYPE_GENRE -> R.string.asset_link_label_genre;
+            case TYPE_YEAR -> R.string.asset_link_label_year;
+            default -> R.string.asset_link_label_unknown;
+        };
     }
 
     public static void applyLinkAppearance(@NonNull View view) {
-        if (view instanceof TextView) {
-            TextView textView = (TextView) view;
+        if (view instanceof TextView textView) {
             if (textView.getTag(R.id.tag_link_original_color) == null) {
                 textView.setTag(R.id.tag_link_original_color, textView.getCurrentTextColor());
             }
-            int accent = MaterialColors.getColor(view, com.google.android.material.R.attr.colorPrimary,
+            int accent = MaterialColors.getColor(view, R.attr.colorOnPrimary,
                     ContextCompat.getColor(view.getContext(), android.R.color.holo_blue_light));
             textView.setTextColor(accent);
         }
     }
 
     public static void clearLinkAppearance(@NonNull View view) {
-        if (view instanceof TextView) {
-            TextView textView = (TextView) view;
+        if (view instanceof TextView textView) {
             Object original = textView.getTag(R.id.tag_link_original_color);
             if (original instanceof Integer) {
                 textView.setTextColor((Integer) original);
             } else {
-                int defaultColor = MaterialColors.getColor(view, com.google.android.material.R.attr.colorOnSurface,
+                int defaultColor = MaterialColors.getColor(view, R.attr.colorOnSurface,
                         ContextCompat.getColor(view.getContext(), android.R.color.primary_text_light));
                 textView.setTextColor(defaultColor);
             }
         }
     }
 
-    public static final class AssetLink {
-        public final String type;
-        public final String id;
-        public final Uri uri;
-
-        AssetLink(@NonNull String type, @NonNull String id, @NonNull Uri uri) {
-            this.type = type;
-            this.id = id;
-            this.uri = uri;
+    public record AssetLink(String type, String id, Uri uri) {
+            public AssetLink(@NonNull String type, @NonNull String id, @NonNull Uri uri) {
+                this.type = type;
+                this.id = id;
+                this.uri = uri;
+            }
         }
-    }
 }

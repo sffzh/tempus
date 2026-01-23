@@ -2,6 +2,7 @@ package com.cappielloantonio.tempo.ui.adapter;
 
 import android.app.Activity;
 import android.os.Bundle;
+import android.text.TextUtils;
 import android.util.Log;
 import android.view.LayoutInflater;
 import android.view.View;
@@ -14,6 +15,8 @@ import androidx.appcompat.content.res.AppCompatResources;
 import androidx.lifecycle.LifecycleOwner;
 import androidx.media3.common.util.UnstableApi;
 import androidx.media3.session.MediaBrowser;
+import androidx.recyclerview.widget.DiffUtil;
+import androidx.recyclerview.widget.ListAdapter;
 import androidx.recyclerview.widget.RecyclerView;
 
 import com.cappielloantonio.tempo.R;
@@ -29,6 +32,7 @@ import com.cappielloantonio.tempo.util.ExternalAudioReader;
 import com.cappielloantonio.tempo.util.MappingUtil;
 import com.cappielloantonio.tempo.util.MusicUtil;
 import com.cappielloantonio.tempo.util.Preferences;
+import com.google.common.collect.Lists;
 import com.google.common.util.concurrent.ListenableFuture;
 
 import java.util.ArrayList;
@@ -40,14 +44,15 @@ import java.util.Optional;
 import java.util.concurrent.ExecutionException;
 
 @UnstableApi
-public class SongHorizontalAdapter extends RecyclerView.Adapter<SongHorizontalAdapter.ViewHolder> implements Filterable {
+public class SongHorizontalAdapter extends ListAdapter<Child, SongHorizontalAdapter.ViewHolder> implements Filterable {
+    private final static String TAG="SongHorizontalAdapter";
     private final ClickCallback click;
     private final boolean showCoverArt;
     private final boolean showAlbum;
     private final AlbumID3 album;
 
     private List<Child> songsFull;
-    private List<Child> songs;
+//    private List<Child> songs;
     private String currentFilter;
 
     private String currentPlayingId;
@@ -60,14 +65,14 @@ public class SongHorizontalAdapter extends RecyclerView.Adapter<SongHorizontalAd
         protected FilterResults performFiltering(CharSequence constraint) {
             List<Child> filteredList = new ArrayList<>();
 
-            if (constraint == null || constraint.length() == 0) {
+            if (TextUtils.isEmpty(constraint)) {
                 filteredList.addAll(songsFull);
             } else {
                 String filterPattern = constraint.toString().toLowerCase().trim();
                 currentFilter = filterPattern;
 
                 for (Child item : songsFull) {
-                    if (item.getTitle().toLowerCase().contains(filterPattern)) {
+                    if (Objects.requireNonNull(item.getTitle()).toLowerCase().contains(filterPattern)) {
                         filteredList.add(item);
                     }
                 }
@@ -81,22 +86,23 @@ public class SongHorizontalAdapter extends RecyclerView.Adapter<SongHorizontalAd
 
         @Override
         protected void publishResults(CharSequence constraint, FilterResults results) {
-            songs = (List<Child>) results.values;
-            notifyDataSetChanged();
+            submitList((List<Child>) results.values);
 
-            for (int pos : currentPlayingPositions) {
-                if (pos >= 0 && pos < songs.size()) {
-                    notifyItemChanged(pos, "payload_playback");
-                }
-            }
+//            for (int pos : currentPlayingPositions) {
+//                if (pos >= 0 && pos < songs.size()) {
+//                    notifyItemChanged(pos, "payload_playback");
+//                }
+//            }
         }
     };
 
     public SongHorizontalAdapter(LifecycleOwner lifecycleOwner, ClickCallback click, boolean showCoverArt, boolean showAlbum, AlbumID3 album) {
+        super(DIFF_CALLBACK); // 必须传给父类
+
         this.click = click;
         this.showCoverArt = showCoverArt;
         this.showAlbum = showAlbum;
-        this.songs = Collections.emptyList();
+//        this.songs = Collections.emptyList();
         this.songsFull = Collections.emptyList();
         this.currentFilter = "";
         this.album = album;
@@ -117,7 +123,7 @@ public class SongHorizontalAdapter extends RecyclerView.Adapter<SongHorizontalAd
     @Override
     public void onBindViewHolder(@NonNull ViewHolder holder, int position, @NonNull List<Object> payloads) {
         if (!payloads.isEmpty() && payloads.contains("payload_playback")) {
-            bindPlaybackState(holder, songs.get(position));
+            bindPlaybackState(holder, getItem(position));
         } else {
             super.onBindViewHolder(holder, position, payloads);
         }
@@ -125,7 +131,7 @@ public class SongHorizontalAdapter extends RecyclerView.Adapter<SongHorizontalAd
 
     @Override
     public void onBindViewHolder(@NonNull ViewHolder holder, int position) {
-        Child song = songs.get(position);
+        Child song = getItem(position);
 
         holder.item.searchResultSongTitleTextView.setText(song.getTitle());
 
@@ -166,21 +172,21 @@ public class SongHorizontalAdapter extends RecyclerView.Adapter<SongHorizontalAd
 
         if (!showCoverArt &&
                 (position == 0 ||
-                        (position > 0 && songs.get(position - 1) != null &&
-                                songs.get(position - 1).getDiscNumber() != null &&
-                                songs.get(position).getDiscNumber() != null &&
-                                songs.get(position - 1).getDiscNumber() < songs.get(position).getDiscNumber()
+                        (position > 0 && getItem(position - 1) != null &&
+                                getItem(position - 1).getDiscNumber() != null &&
+                                getItem(position).getDiscNumber() != null &&
+                                getItem(position - 1).getDiscNumber() < getItem(position).getDiscNumber()
                         )
                 )
         ) {
             holder.item.differentDiskDividerSector.setVisibility(View.VISIBLE);
 
-            if (songs.get(position).getDiscNumber() != null && !Objects.requireNonNull(songs.get(position).getDiscNumber()).toString().isBlank()) {
-                holder.item.discTitleTextView.setText(holder.itemView.getContext().getString(R.string.disc_titleless, songs.get(position).getDiscNumber().toString()));
+            if (getItem(position).getDiscNumber() != null && !Objects.requireNonNull(getItem(position).getDiscNumber()).toString().isBlank()) {
+                holder.item.discTitleTextView.setText(holder.itemView.getContext().getString(R.string.disc_titleless, getItem(position).getDiscNumber().toString()));
             }
 
             if (album.getDiscTitles() != null) {
-                Optional<DiscTitle> discTitle = album.getDiscTitles().stream().filter(title -> Objects.equals(title.getDisc(), songs.get(position).getDiscNumber())).findFirst();
+                Optional<DiscTitle> discTitle = album.getDiscTitles().stream().filter(title -> Objects.equals(title.getDisc(), getItem(position).getDiscNumber())).findFirst();
 
                 if (discTitle.isPresent() && discTitle.get().getDisc() != null && discTitle.get().getTitle() != null && !discTitle.get().getTitle().isEmpty()) {
                     holder.item.discTitleTextView.setText(holder.itemView.getContext().getString(R.string.disc_titlefull, discTitle.get().getDisc().toString() , discTitle.get().getTitle()));
@@ -243,13 +249,13 @@ public class SongHorizontalAdapter extends RecyclerView.Adapter<SongHorizontalAd
 
     @Override
     public int getItemCount() {
-        return songs.size();
+        return getCurrentList().size();
     }
 
     public void setItems(List<Child> songs) {
         this.songsFull = songs != null ? songs : Collections.emptyList();
-        filtering.filter(currentFilter);
-        notifyDataSetChanged();
+        // 初始提交全量列表
+        submitList(songsFull);
     }
 
     @Override
@@ -280,12 +286,12 @@ public class SongHorizontalAdapter extends RecyclerView.Adapter<SongHorizontalAd
         currentPlayingPositions = mediaId != null ? findPositionsById(mediaId) : Collections.emptyList();
 
         for (int pos : oldPositions) {
-            if (pos >= 0 && pos < songs.size()) {
+            if (pos >= 0 && pos < getItemCount()) {
                 notifyItemChanged(pos, "payload_playback");
             }
         }
         for (int pos : currentPlayingPositions) {
-            if (!oldPositions.contains(pos) && pos >= 0 && pos < songs.size()) {
+            if (!oldPositions.contains(pos) && pos >= 0 && pos < getItemCount()) {
                 notifyItemChanged(pos, "payload_playback");
             }
         }
@@ -294,8 +300,8 @@ public class SongHorizontalAdapter extends RecyclerView.Adapter<SongHorizontalAd
     private List<Integer> findPositionsById(String id) {
         if (id == null) return Collections.emptyList();
         List<Integer> positions = new ArrayList<>();
-        for (int i = 0; i < songs.size(); i++) {
-            if (id.equals(songs.get(i).getId())) {
+        for (int i = 0; i < getItemCount(); i++) {
+            if (id.equals(getItem(i).getId())) {
                 positions.add(i);
             }
         }
@@ -307,9 +313,6 @@ public class SongHorizontalAdapter extends RecyclerView.Adapter<SongHorizontalAd
         return filtering;
     }
 
-    public Child getItem(int id) {
-        return songs.get(id);
-    }
 
     public class ViewHolder extends RecyclerView.ViewHolder {
         ItemHorizontalTrackBinding item;
@@ -330,24 +333,25 @@ public class SongHorizontalAdapter extends RecyclerView.Adapter<SongHorizontalAd
 
         public void onClick() {
             int pos = getBindingAdapterPosition();
-            Child tappedSong = songs.get(pos);
+            Child tappedSong = getItem(pos);
 
             Bundle bundle = new Bundle();
-            bundle.putParcelableArrayList(Constants.TRACKS_OBJECT, new ArrayList<>(MusicUtil.limitPlayableMedia(songs, getBindingAdapterPosition())));
-            bundle.putInt(Constants.ITEM_POSITION, MusicUtil.getPlayableMediaPosition(songs, getBindingAdapterPosition()));
+            bundle.putParcelableArrayList(Constants.TRACKS_OBJECT, new ArrayList<>(MusicUtil.limitPlayableMedia(getCurrentList(), getBindingAdapterPosition())));
+            bundle.putInt(Constants.ITEM_POSITION, MusicUtil.getPlayableMediaPosition(getCurrentList(), getBindingAdapterPosition()));
 
             if (tappedSong.getId().equals(currentPlayingId)) {
-                Log.i("SongHorizontalAdapter", "Tapping on currently playing song, toggling playback");
+                Log.d("SongHorizontalAdapter", "Tapping on currently playing song, toggling playback");
                 try{
                     MediaBrowser mediaBrowser = mediaBrowserListenableFuture.get();
-                    Log.i("SongHorizontalAdapter", "MediaBrowser retrieved, isPlaying: " + isPlaying);
+                    Log.d("SongHorizontalAdapter", "MediaBrowser retrieved, isPlaying: " + isPlaying);
+                    assert mediaBrowser != null;
                     if (isPlaying) {
                         mediaBrowser.pause();
                     } else {
                         mediaBrowser.play();
                     }
                 } catch (ExecutionException | InterruptedException e) {
-                    Log.e("SongHorizontalAdapter", "Error getting MediaBrowser", e);
+                    Log.e(TAG, "Error getting MediaBrowser", e);
                 }
             } else {
                 click.onMediaClick(bundle);
@@ -356,7 +360,7 @@ public class SongHorizontalAdapter extends RecyclerView.Adapter<SongHorizontalAd
 
         private boolean onLongClick() {
             Bundle bundle = new Bundle();
-            bundle.putParcelable(Constants.TRACK_OBJECT, songs.get(getBindingAdapterPosition()));
+            bundle.putParcelable(Constants.TRACK_OBJECT, getItem(getBindingAdapterPosition()));
 
             click.onMediaLongClick(bundle);
 
@@ -365,22 +369,39 @@ public class SongHorizontalAdapter extends RecyclerView.Adapter<SongHorizontalAd
     }
 
     public void sort(String order) {
+        //列表重新排序
         switch (order) {
             case Constants.MEDIA_BY_TITLE:
-                songs.sort(Comparator.comparing(Child::getTitle));
+                getCurrentList().sort(Comparator.comparing(Child::getTitle));
                 break;
             case Constants.MEDIA_MOST_RECENTLY_STARRED:
-                songs.sort(Comparator.comparing(Child::getStarred, Comparator.nullsLast(Comparator.reverseOrder())));
+                getCurrentList().sort(Comparator.comparing(Child::getStarred, Comparator.nullsLast(Comparator.reverseOrder())));
                 break;
             case Constants.MEDIA_LEAST_RECENTLY_STARRED:
-                songs.sort(Comparator.comparing(Child::getStarred, Comparator.nullsLast(Comparator.naturalOrder())));
+                getCurrentList().sort(Comparator.comparing(Child::getStarred, Comparator.nullsLast(Comparator.naturalOrder())));
                 break;
         }
 
-        notifyDataSetChanged();
+//        notifyDataSetChanged();
     }
 
     public void setMediaBrowserListenableFuture(ListenableFuture<MediaBrowser> mediaBrowserListenableFuture) {
         this.mediaBrowserListenableFuture = mediaBrowserListenableFuture;
     }
+
+    private static final DiffUtil.ItemCallback<Child> DIFF_CALLBACK = new DiffUtil.ItemCallback<Child>() {
+        @Override
+        public boolean areItemsTheSame(@NonNull Child oldItem, @NonNull Child newItem) {
+            // 判断是否是同一个条目（通常比较唯一 ID）
+            return Objects.equals(oldItem.getId(), newItem.getId());
+        }
+
+        @Override
+        public boolean areContentsTheSame(@NonNull Child oldItem, @NonNull Child newItem) {
+            // 判断内容是否发生变化（影响 UI 显示的字段）
+            return Objects.equals(oldItem.getTitle(), newItem.getTitle()) &&
+                    Objects.equals(oldItem.getStarred(), newItem.getStarred()) &&
+                    Objects.equals(oldItem.getUserRating(), newItem.getUserRating());
+        }
+    };
 }

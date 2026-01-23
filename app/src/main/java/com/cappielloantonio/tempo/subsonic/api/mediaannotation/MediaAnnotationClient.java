@@ -2,7 +2,7 @@ package com.cappielloantonio.tempo.subsonic.api.mediaannotation;
 
 import android.util.Log;
 
-import com.cappielloantonio.tempo.subsonic.RetrofitClient;
+import com.cappielloantonio.tempo.subsonic.RetrofitManager;
 import com.cappielloantonio.tempo.subsonic.Subsonic;
 import com.cappielloantonio.tempo.subsonic.base.ApiResponse;
 
@@ -16,7 +16,7 @@ public class MediaAnnotationClient {
 
     public MediaAnnotationClient(Subsonic subsonic) {
         this.subsonic = subsonic;
-        this.mediaAnnotationService = new RetrofitClient(subsonic).getRetrofit().create(MediaAnnotationService.class);
+        this.mediaAnnotationService = RetrofitManager.createService(subsonic.getUrl(),MediaAnnotationService.class);
     }
 
     public Call<ApiResponse> star(String id, String albumId, String artistId) {

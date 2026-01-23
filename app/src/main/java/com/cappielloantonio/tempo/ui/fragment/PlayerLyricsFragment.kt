@@ -127,7 +127,7 @@ class PlayerLyricsFragment : Fragment() {
 
     private fun observeLyrics() {
         viewModel.liveLyricsList.observe(viewLifecycleOwner) { lyricsList ->
-            if (hasStructuredLyrics(lyricsList)) {
+            if (LyricsList.hasStructuredLyrics(lyricsList)) {
                 val lyricLines = lyricsList.toBilingualLines()
                 bind?.lyricView?.setLyrics(lyricLines)
 
@@ -182,9 +182,4 @@ class PlayerLyricsFragment : Fragment() {
             }
         }
     }
-
-    private fun hasStructuredLyrics(list: LyricsList?): Boolean {
-        return list?.structuredLyrics?.firstOrNull()?.line?.isNotEmpty() == true
-    }
-
 }

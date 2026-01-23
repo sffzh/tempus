@@ -28,7 +28,7 @@ import java.util.List;
 @OptIn(markerClass = UnstableApi.class)
 public class MappingUtil {
     public static List<MediaItem> mapMediaItems(List<Child> items) {
-        ArrayList<MediaItem> mediaItems = new ArrayList<>();
+        ArrayList<MediaItem> mediaItems = new ArrayList<>(items.size());
 
         for (int i = 0; i < items.size(); i++) {
             mediaItems.add(mapMediaItem(items.get(i)));

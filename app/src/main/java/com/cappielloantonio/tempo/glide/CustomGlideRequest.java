@@ -58,27 +58,22 @@ public class CustomGlideRequest {
 
     @Nullable
     private static Drawable getPlaceholder(Context context, ResourceType type) {
-        switch (type) {
-            case Album:
-                return AppCompatResources.getDrawable(context, R.drawable.ic_placeholder_album);
-            case Artist:
-                return AppCompatResources.getDrawable(context, R.drawable.ic_placeholder_artist);
-            case Folder:
-                return AppCompatResources.getDrawable(context, R.drawable.ic_placeholder_folder);
-            case Directory:
-                return AppCompatResources.getDrawable(context, R.drawable.ic_placeholder_directory);
-            case Playlist:
-                return AppCompatResources.getDrawable(context, R.drawable.ic_placeholder_playlist);
-            case Podcast:
-                return AppCompatResources.getDrawable(context, R.drawable.ic_placeholder_podcast);
-            case Radio:
-                return AppCompatResources.getDrawable(context, R.drawable.ic_placeholder_radio);
-            case Song:
-                return AppCompatResources.getDrawable(context, R.drawable.ic_placeholder_song);
-            default:
-            case Unknown:
-                return new ColorDrawable(SurfaceColors.SURFACE_5.getColor(context));
-        }
+        return switch (type) {
+            case Album -> AppCompatResources.getDrawable(context, R.drawable.ic_placeholder_album);
+            case Artist ->
+                    AppCompatResources.getDrawable(context, R.drawable.ic_placeholder_artist);
+            case Folder ->
+                    AppCompatResources.getDrawable(context, R.drawable.ic_placeholder_folder);
+            case Directory ->
+                    AppCompatResources.getDrawable(context, R.drawable.ic_placeholder_directory);
+            case Playlist ->
+                    AppCompatResources.getDrawable(context, R.drawable.ic_placeholder_playlist);
+            case Podcast ->
+                    AppCompatResources.getDrawable(context, R.drawable.ic_placeholder_podcast);
+            case Radio -> AppCompatResources.getDrawable(context, R.drawable.ic_placeholder_radio);
+            case Song -> AppCompatResources.getDrawable(context, R.drawable.ic_placeholder_song);
+            default -> new ColorDrawable(SurfaceColors.SURFACE_5.getColor(context));
+        };
     }
 
     public static String createUrl(String item, int size) {
@@ -106,7 +101,7 @@ public class CustomGlideRequest {
 
         uri.append("&id=").append(item);
 
-        Log.d(TAG, "createUrl() " + uri);
+//        Log.d(TAG, "createUrl() " + uri);
 
         return uri.toString();
     }

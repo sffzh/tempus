@@ -23,12 +23,8 @@ public final class ExternalDownloadMetadataStore {
     private ExternalDownloadMetadataStore() {
     }
 
-    private static SharedPreferences preferences() {
-        return App.getInstance().getPreferences();
-    }
-
     private static JSONObject readAll() {
-        String raw = preferences().getString(PREF_KEY, "{}");
+        String raw = Preferences.getString(PREF_KEY, "{}");
         try {
             return new JSONObject(raw);
         } catch (JSONException e) {
@@ -37,7 +33,7 @@ public final class ExternalDownloadMetadataStore {
     }
 
     private static void writeAll(JSONObject object) {
-        preferences().edit().putString(PREF_KEY, object.toString()).apply();
+        Preferences.putString(PREF_KEY, object.toString());
     }
 
     public static synchronized void clear() {

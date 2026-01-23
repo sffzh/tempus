@@ -2,10 +2,8 @@ package com.cappielloantonio.tempo;
 
 import android.app.Application;
 import android.content.Context;
-import android.content.SharedPreferences;
 
 import androidx.annotation.NonNull;
-import androidx.preference.PreferenceManager;
 
 import com.cappielloantonio.tempo.github.Github;
 import com.cappielloantonio.tempo.helper.ThemeHelper;
@@ -13,40 +11,33 @@ import com.cappielloantonio.tempo.subsonic.Subsonic;
 import com.cappielloantonio.tempo.subsonic.SubsonicPreferences;
 import com.cappielloantonio.tempo.util.Preferences;
 
+import cn.sffzh.tempus.navidrome.Navidrome;
+
 public class App extends Application {
     private static App instance;
-    private static Context context;
     private static Subsonic subsonic;
+
+    private static Navidrome naviDrome;
+
     private static Github github;
-    private static SharedPreferences preferences;
 
     @Override
     public void onCreate() {
         super.onCreate();
+        // 1. 关键：指向系统创建的实例
+        instance = this;
 
-        SharedPreferences sharedPreferences = PreferenceManager.getDefaultSharedPreferences(getApplicationContext());
-        String themePref = sharedPreferences.getString(Preferences.THEME, ThemeHelper.DEFAULT_MODE);
-        ThemeHelper.applyTheme(themePref);
-
-        instance = new App();
-        context = getApplicationContext();
-        preferences = PreferenceManager.getDefaultSharedPreferences(context);
+//        SharedPreferences sharedPreferences = PreferenceManager.getDefaultSharedPreferences(getApplicationContext());
+        Preferences.migrateSharedPreferences(androidx.preference.PreferenceManager.getDefaultSharedPreferences(App.getInstance()));
+        ThemeHelper.applyTheme(Preferences.getTheme(ThemeHelper.DEFAULT_MODE));
     }
 
     public static App getInstance() {
-        if (instance == null) {
-            instance = new App();
-        }
-
         return instance;
     }
 
     public static Context getContext() {
-        if (context == null) {
-            context = getInstance();
-        }
-
-        return context;
+        return instance;
     }
 
     public static Subsonic getSubsonicClientInstance(boolean override) {
@@ -61,14 +52,6 @@ public class App extends Application {
             github = new Github();
         }
         return github;
-    }
-
-    public SharedPreferences getPreferences() {
-        if (preferences == null) {
-            preferences = PreferenceManager.getDefaultSharedPreferences(context);
-        }
-
-        return preferences;
     }
 
     public static void refreshSubsonicClient() {

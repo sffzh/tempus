@@ -13,7 +13,10 @@ import com.bumptech.glide.request.transition.Transition;
 import com.cappielloantonio.tempo.glide.CustomGlideRequest;
 import com.cappielloantonio.tempo.R;
 
+import androidx.annotation.NonNull;
+import androidx.annotation.OptIn;
 import androidx.media3.common.C;
+import androidx.media3.common.util.UnstableApi;
 import androidx.media3.session.MediaController;
 import androidx.media3.session.SessionToken;
 
@@ -100,7 +103,7 @@ public final class WidgetUpdateManager {
                     WIDGET_SAFE_ART_SIZE,
                     new CustomTarget<Bitmap>() {
                         @Override
-                        public void onResourceReady(Bitmap resource, Transition<? super Bitmap> transition) {
+                        public void onResourceReady(@NonNull Bitmap resource, Transition<? super Bitmap> transition) {
                             AppWidgetManager mgr = AppWidgetManager.getInstance(appCtx);
                             int[] ids = mgr.getAppWidgetIds(new ComponentName(appCtx, WidgetProvider4x1.class));
                             for (int id : ids) {
@@ -136,6 +139,7 @@ public final class WidgetUpdateManager {
         }
     }
 
+    @OptIn(markerClass = UnstableApi.class)
     public static void refreshFromController(Context ctx) {
         final Context appCtx = ctx.getApplicationContext();
         SessionToken token = new SessionToken(appCtx, new ComponentName(appCtx, MediaService.class));
@@ -144,10 +148,11 @@ public final class WidgetUpdateManager {
             try {
                 if (!future.isDone()) return;
                 MediaController c = future.get();
+                assert c != null;
                 androidx.media3.common.MediaItem mi = c.getCurrentMediaItem();
                 String title = null, artist = null, album = null, coverId = null;
                 String songLink = null, albumLink = null, artistLink = null;
-                if (mi != null && mi.mediaMetadata != null) {
+                if (mi != null) {
                     if (mi.mediaMetadata.title != null) title = mi.mediaMetadata.title.toString();
                     if (mi.mediaMetadata.artist != null)
                         artist = mi.mediaMetadata.artist.toString();
