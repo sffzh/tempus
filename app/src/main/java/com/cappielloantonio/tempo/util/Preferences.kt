@@ -511,7 +511,7 @@ object Preferences {
     }
 
     fun resetPlaybackSpeed() {
-        setPlaybackSpeed(Constants.MEDIA_PLAYBACK_SPEED_100)
+        setPlaybackSpeed(1f)
     }
 
     @JvmStatic
