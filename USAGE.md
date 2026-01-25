@@ -1,4 +1,7 @@
-# Tempus Usage Guide 
+# Tempus Usage Guide
+
+> Note: This document was copied from the `eddyizm/tempus` project, so it may be missing descriptions of some new features. I will update it when I have time.
+
 [<- back home](README.md)
 
 ## Table of Contents
@@ -166,7 +169,7 @@ To allow the Tempus app on your car's head unit, "Unknown sources" needs to be e
    <img width="270" height="600" alt="1b" src="https://github.com/user-attachments/assets/0795e508-ba01-41c5-96a7-7c03b0156591" />
    <img width="270" height="600" alt="1c" src="https://github.com/user-attachments/assets/51c15f67-fddb-452e-b5d3-5092edeab390" />
 </p>
-   
+
 2. Go to the "Developer settings" by the menu at the top right.
 <p align="left">
    <img width="270" height="600" alt="2" src="https://github.com/user-attachments/assets/1ecd1f3e-026d-4d25-87f2-be7f12efbac6" />
@@ -207,4 +210,4 @@ For additional help:
 
 ---
 
-*Note: This app requires a pre-existing Subsonic-compatible server with music content.*
+*Note: This app requires a pre-existing Subsonic-compatible server （such as Navidrome） with music content.*

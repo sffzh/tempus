@@ -73,8 +73,10 @@ Please note the two variants in the release assets include release/debug and 32/
 - Optimized application performance to handle specific scenarios (such as playlists with a large number of entries).
 - Expanded lyrics display area.
 - Smooth scrolling of lyrics (while also improving performance).
+- Supports displaying lyrics in two lines (with translation).
 - Optimized display effects in landscape and split-screen modes.
 - Optimized random playback logic.
+- Significant optimizations were made to utilize more modern and performant code solutions.
 
 > Further performance optimizations will be carried out.
 
@@ -110,10 +112,9 @@ Please note the two variants in the release assets include release/debug and 32/
     <img src="fastlane/metadata/android/en-US/images/phoneScreenshots/dark_4.png" width=200>
     <img src="fastlane/metadata/android/en-US/images/phoneScreenshots/dark_5.png" width=200>
     <img src="fastlane/metadata/android/en-US/images/phoneScreenshots/dark_6.png" width=200>
-
 </p>
 
-## Contributing  
+## Contributing
 
 Please fork and open PR's against the development branch (dev_sffzh). Make sure your PR builds successfully. 
 
