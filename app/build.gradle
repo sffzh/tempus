@@ -1,6 +1,8 @@
 import com.android.build.api.variant.FilterConfiguration
 import org.jetbrains.kotlin.gradle.dsl.JvmTarget
 
+import java.time.LocalDate
+
 plugins {
     id 'com.android.application'
     // AGP 9.0+ 自动处理 Kotlin 支持，不再需要 org.jetbrains.kotlin.android
@@ -28,8 +30,9 @@ android {
 
         manifestPlaceholders["HARMONYOS_SUPPORT"] = "true"
 
-        versionCode 26012501
-        versionName '1.0.0'
+        versionName = project.property("VERSION_NAME") as String
+        versionCode = (project.property("VERSION_CODE") as String).toInt()
+
         testInstrumentationRunner 'androidx.test.runner.AndroidJUnitRunner'
 
         javaCompileOptions {
