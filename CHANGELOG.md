@@ -4,7 +4,13 @@
 
 * 优化曲目增益模式
 
-## Tempus-F 1.0.0 对比 Tempus 4.9.1 版本
+## v1.0.0
+
+- 更换软件图标和包名，以上传F-Droid并与Tempus共存。
+
+其他功能项见 [Tempus-F 1.0.0 对比 Tempus 4.9.1 版本](###Tempus-F 1.0.0 对比 Tempus 4.9.1 版本)
+
+### Tempus-F 1.0.0 对比 Tempus 4.9.1 版本
 
 ### What's Changed
 
@@ -14,7 +20,6 @@
 * 优化首页启动、歌曲列表加载等逻辑，提升性能
 * 调整歌词页布局，扩大歌词显示区域，使能显示更多行歌词
 
-## 
 ## Attention
 
 This release will not update previous installs as it is considered a new app, no longer `Tempus`, new icon, new app id, and new app name. Hoping it will not be a huge inconvenience but was necessary in order to publish to app stores like IzzyDroid and F-Droid.  
