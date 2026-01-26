@@ -31,7 +31,7 @@ android {
         manifestPlaceholders["HARMONYOS_SUPPORT"] = "true"
 
         versionName = project.property("VERSION_NAME") as String
-        versionCode = (project.property("VERSION_CODE") as String).toInt()
+        versionCode = Integer.parseInt(project.property("VERSION_CODE").toString())
 
         testInstrumentationRunner 'androidx.test.runner.AndroidJUnitRunner'
 
