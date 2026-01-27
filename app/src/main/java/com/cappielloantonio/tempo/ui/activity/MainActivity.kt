@@ -108,11 +108,11 @@ class MainActivity : BaseActivity() {
 
     private fun observeOpenSubsonicExtensions() {
     if (Preferences.isLogged()) {
-        mainViewModel.openSubsonicExtensions.observe(this, { openSubsonicExtensions ->
+        mainViewModel.openSubsonicExtensions.observe(this) { openSubsonicExtensions ->
             if (openSubsonicExtensions != null) {
                 Preferences.setOpenSubsonicExtensions(openSubsonicExtensions)
             }
-        })
+        }
     }
 }
 }
