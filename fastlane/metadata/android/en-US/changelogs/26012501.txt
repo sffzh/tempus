@@ -1,0 +1,5 @@
+* Lyric scrolling has been changed to smooth scrolling, utilizing Android's native animation effects and UI update mechanisms for more immediate response and better performance.
+* Lyrics support dual-line display with translations.
+* Optimized software data caching; Subsonic user passwords and tokens are encrypted and stored locally, reducing security risks.
+* Optimized homepage startup and song list loading logic to improve performance.
+* Adjusted the lyric page layout to enlarge the lyric display area, allowing more lines of lyrics to be displayed.

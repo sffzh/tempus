@@ -3,12 +3,15 @@ package com.cappielloantonio.tempo.ui.dialog;
 import android.app.Dialog;
 import android.os.Bundle;
 import android.text.TextUtils;
+import android.util.Log;
 import android.view.View;
 import android.widget.Toast;
 
 import androidx.annotation.NonNull;
+import androidx.annotation.OptIn;
 import androidx.fragment.app.DialogFragment;
 import androidx.lifecycle.ViewModelProvider;
+import androidx.media3.common.util.UnstableApi;
 
 import com.cappielloantonio.tempo.R;
 import com.cappielloantonio.tempo.databinding.DialogServerSignupBinding;
@@ -20,6 +23,7 @@ import com.google.android.material.dialog.MaterialAlertDialogBuilder;
 import java.util.Objects;
 import java.util.UUID;
 
+@UnstableApi
 public class ServerSignupDialog extends DialogFragment {
     private static final String TAG = "ServerSignupDialog";
 
@@ -33,6 +37,7 @@ public class ServerSignupDialog extends DialogFragment {
     private String localAddress;
     private boolean lowSecurity = false;
 
+    @OptIn(markerClass = UnstableApi.class)
     @NonNull
     @Override
     public Dialog onCreateDialog(Bundle savedInstanceState) {
@@ -52,9 +57,13 @@ public class ServerSignupDialog extends DialogFragment {
     @Override
     public void onStart() {
         super.onStart();
-
         setServerInfo();
         setButtonAction();
+    }
+
+    @Override
+    public void onViewCreated(@NonNull View view, Bundle savedInstanceState) {
+
     }
 
     @Override
@@ -63,9 +72,11 @@ public class ServerSignupDialog extends DialogFragment {
         bind = null;
     }
 
+    @OptIn(markerClass = UnstableApi.class)
     private void setServerInfo() {
+        Log.d(TAG, "setServerInfo:"+getArguments());
         if (getArguments() != null) {
-            loginViewModel.setServerToEdit(requireArguments().getParcelable("server_object"));
+            loginViewModel.setServerToEdit(Objects.requireNonNull(requireArguments().getParcelable("server_object")));
 
             if (loginViewModel.getServerToEdit() != null) {
                 bind.serverNameTextView.setText(loginViewModel.getServerToEdit().getServerName());
@@ -80,6 +91,7 @@ public class ServerSignupDialog extends DialogFragment {
         }
     }
 
+    @OptIn(markerClass = UnstableApi.class)
     private void setButtonAction() {
         androidx.appcompat.app.AlertDialog alertDialog = (androidx.appcompat.app.AlertDialog) Objects.requireNonNull(getDialog());
 
@@ -135,6 +147,7 @@ public class ServerSignupDialog extends DialogFragment {
         return true;
     }
 
+    @OptIn(markerClass = UnstableApi.class)
     private void saveServerPreference() {
         String serverID = loginViewModel.getServerToEdit() != null ? loginViewModel.getServerToEdit().getServerId() : UUID.randomUUID().toString();
         loginViewModel.addServer(new Server(serverID, this.serverName, this.username, this.password, this.server, this.localAddress, System.currentTimeMillis(), this.lowSecurity));

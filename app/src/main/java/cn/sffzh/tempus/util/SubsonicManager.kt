@@ -4,14 +4,14 @@ import android.util.Log
 import com.cappielloantonio.tempo.subsonic.Subsonic
 import com.cappielloantonio.tempo.subsonic.SubsonicPreferences
 import com.cappielloantonio.tempo.util.Preferences
-import com.cappielloantonio.tempo.util.Preferences.getInUseServerAddress
-import com.cappielloantonio.tempo.util.Preferences.getUser
-import com.cappielloantonio.tempo.util.Preferences.isLowScurity
 import com.cappielloantonio.tempo.util.SecurePrefs
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.distinctUntilChanged
+import kotlinx.coroutines.flow.filterNotNull
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.runBlocking
@@ -25,60 +25,86 @@ object SubsonicManager {
     private val mutex = Mutex()
     private var subsonic: Subsonic? = null
 
-    // Flow 监听 token/salt/server/user 的变化
-    private val prefsFlow = combine(
+    private val _subsonicFlow = MutableStateFlow<Subsonic?>(null)
+    val subsonicFlow: StateFlow<Subsonic?> = _subsonicFlow
+
+    private var isLogout: Boolean = false
+
+    // Flow 监听 token/salt 的变化
+    private val tokenSaltFlow = combine(
         SecurePrefs.tokenFlow,
-        SecurePrefs.saltFlow,
-        SecurePrefs.passwordFlow
-    ) { token, salt, password ->
-        if (password == null) {
-            Log.e(TAG, "初始化 subsonic Client失败，password为null. 这属于意外逻辑，可能引起崩溃。")
-            null
-        } else {
-            val server = getInUseServerAddress()
-            val username = getUser()
-            val isLowSecurity = isLowScurity()
-
+        SecurePrefs.saltFlow
+    ) { token, salt ->
+        if (token != null && salt != null) {
+            //如果获取subsoic对象时未初始化，则强制使用password重新刷新Token.
             val preferences = SubsonicPreferences()
-            preferences.serverUrl = server
-            preferences.username = username
-            preferences.setAuthentication(password, token, salt, isLowSecurity)
-
-            if (token == null || salt == null) {
-                //更新了token 所以当需要手动更新token时，可以直接将其设置为null.
-                Preferences.setToken(
-                    preferences.authentication.token,
-                    preferences.authentication.salt
-                )
-            }
+            preferences.serverUrl = Preferences.getInUseServerAddress()
+            preferences.username = Preferences.getUser()
+            preferences.setAuthentication(null, token, salt, false)
             preferences
-        }
-    }.distinctUntilChanged()
+        } else null
+    }.filterNotNull()
+        .distinctUntilChanged()
+
+
+
 
     init {
         // 当任意参数变化时，自动重建 Subsonic
         CoroutineScope(Dispatchers.IO).launch {
-            prefsFlow.collect { prefs ->
-                mutex.withLock {
-                    subsonic = Subsonic(prefs)
-                }
+            SecurePrefs.passwordFlow .filterNotNull()
+                .distinctUntilChanged()
+                .collect { password ->
+                    if (Preferences.isLowScurity()){
+                        //不安全模式直接从pasoword重新创建Subsonic对象。
+                        val preferences = SubsonicPreferences()
+                        preferences.serverUrl = Preferences.getInUseServerAddress()
+                        preferences.username = Preferences.getUser()
+                        preferences.setAuthentication(password, null, null, true)
+                        rebuildSubsonic(preferences)
+                    }else{
+                        val auth = SubsonicPreferences.SubsonicAuthentication(password, false)
+                        SecurePrefs.setToken(auth.token, auth.salt)
+                    }
+
+            }
+        }
+
+        CoroutineScope(Dispatchers.IO).launch {
+            tokenSaltFlow.collect { preferences ->
+                rebuildSubsonic(preferences)
             }
         }
     }
 
-    suspend fun getSubsonicAsync(): Subsonic {
+    suspend fun getSubsonic(): Subsonic {
         subsonic?.let { return it }
+        if (isLogout) {
+            Log.e(TAG, "getSubsonic 尝试在未登录状态下获取Subsonic对象")
+            throw RuntimeException("User has been logged out.")
+        }
+        return subsonicFlow.filterNotNull().first()
+    }
 
-        return mutex.withLock {
-            subsonic?.let { return it }
-
-            val prefs = prefsFlow.first()
+    private suspend fun rebuildSubsonic(prefs: SubsonicPreferences) {
+        mutex.withLock {
             val client = Subsonic(prefs)
             subsonic = client
-            client
+            _subsonicFlow.value = client
         }
     }
 
+    @Deprecated(
+        message = "Use suspend fun getSubsonic() instead",
+        replaceWith = ReplaceWith("getSubsonic()")
+    )
     fun getSubsonicBlocking(): Subsonic =
-        runBlocking { getSubsonicAsync() }
+        runBlocking { getSubsonic() }
+
+    @JvmStatic
+    fun clearLogin() {
+        isLogout = true
+        subsonic = null
+        _subsonicFlow.value = null
+    }
 }

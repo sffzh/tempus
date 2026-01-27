@@ -26,8 +26,8 @@ class App : Application() {
         }
 
         @Deprecated(
-            "Use suspend fun SubsonicManager.getSubsonicAsync() instead.",
-            ReplaceWith("SubsonicManager.getSubsonicAsync()")
+            "Use suspend fun SubsonicManager.getSubsonic() instead.",
+            ReplaceWith("SubsonicManager.getSubsonic()")
         )
         @JvmStatic
         fun getSubsonicClientInstance(override: Boolean): Subsonic {
@@ -64,7 +64,6 @@ class App : Application() {
         }
 
         kotlinx.coroutines.GlobalScope.launch(kotlinx.coroutines.Dispatchers.IO) {
-            Preferences.migrateOldEncryptedPrefs(App.getContext())
             ThemeHelper.applyTheme(getTheme(ThemeHelper.DEFAULT_MODE))
         }
 

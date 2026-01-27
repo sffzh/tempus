@@ -30,6 +30,8 @@ import com.cappielloantonio.tempo.ui.dialog.ServerSignupDialog;
 import com.cappielloantonio.tempo.util.Preferences;
 import com.cappielloantonio.tempo.viewmodel.LoginViewModel;
 
+import cn.sffzh.tempus.util.SubsonicManager;
+
 @UnstableApi
 public class LoginFragment extends Fragment implements ClickCallback {
     private static final String TAG = "LoginFragment";
@@ -117,10 +119,11 @@ public class LoginFragment extends Fragment implements ClickCallback {
     @Override
     public void onServerClick(Bundle bundle) {
         Server server = bundle.getParcelable("server_object");
+        assert server != null;
         saveServerPreference(server.getServerId(), server.getAddress(), server.getLocalAddress(), server.getUsername(), server.getPassword(), server.isLowSecurity());
 
         SystemRepository systemRepository = new SystemRepository();
-        systemRepository.checkUserCredential(new SystemCallback() {
+        systemRepository.checkUserCredentialJava(new SystemCallback() {
             @Override
             public void onError(Exception exception) {
                 Preferences.switchInUseServerAddress();
@@ -150,7 +153,6 @@ public class LoginFragment extends Fragment implements ClickCallback {
         Preferences.setPassword(password);
         Preferences.setLowSecurity(isLowSecurity);
 
-        App.getSubsonicClientInstance(true);
     }
 
     private void resetServerPreference() {
@@ -158,7 +160,7 @@ public class LoginFragment extends Fragment implements ClickCallback {
         Preferences.setServer(null);
         Preferences.clearLogin();
         Preferences.setLowSecurity(false);
+        SubsonicManager.clearLogin();
 
-        App.getSubsonicClientInstance(true);
     }
 }

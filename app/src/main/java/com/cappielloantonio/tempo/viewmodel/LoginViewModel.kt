@@ -71,7 +71,7 @@ class LoginViewModel : ViewModel() {
         }
     }
 
-    fun setServerToEdit(server: Server) {
+    fun setServerToEdit(server: Server?) {
         toEdit = server;
     }
 

@@ -8,8 +8,6 @@ import androidx.datastore.preferences.core.edit
 import androidx.datastore.preferences.core.stringPreferencesKey
 import androidx.datastore.preferences.preferencesDataStore
 import androidx.media3.common.Player
-import androidx.security.crypto.EncryptedSharedPreferences
-import androidx.security.crypto.MasterKey
 import com.cappielloantonio.tempo.App
 import com.cappielloantonio.tempo.model.HomeSector
 import com.cappielloantonio.tempo.subsonic.models.OpenSubsonicExtension
@@ -17,14 +15,13 @@ import com.google.crypto.tink.Aead
 import com.google.crypto.tink.KeyTemplates
 import com.google.crypto.tink.aead.AeadConfig
 import com.google.crypto.tink.integration.android.AndroidKeysetManager
+import com.google.crypto.tink.internal.RegistryConfiguration
 import com.google.gson.Gson
 import kotlinx.coroutines.DelicateCoroutinesApi
-import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.launch
-import kotlinx.coroutines.withContext
 
 // ---------------------- DataStore 扩展 ----------------------
 
@@ -53,7 +50,7 @@ object CryptoManager {
     }
 
     private val aead: Aead by lazy {
-        keysetHandle.getPrimitive(Aead::class.java)
+        keysetHandle.getPrimitive(RegistryConfiguration.get(), Aead::class.java)
     }
 
     fun encrypt(plainText: String): String {
@@ -118,13 +115,36 @@ object SecurePrefs {
     val tokenFlow: Flow<String?> =
         encryptedFlow(PrefKeys.TOKEN) { it }
 
+    @Deprecated(
+        message = "use setToken(token, salt) instead",
+        replaceWith = ReplaceWith("setToken(token, salt)")
+    )
     suspend fun setToken(value: String?) =
         setEncrypted(PrefKeys.TOKEN, value) { it }
+
+    suspend fun setToken(token: String?, salt: String?) {
+        val tokenKey = stringPreferencesKey(PrefKeys.TOKEN)
+        val saltKey = stringPreferencesKey(PrefKeys.SALT)
+        val context = App.getContext()
+        context.secureDataStore.edit { prefs ->
+            if (token == null || salt == null) {
+                prefs.remove(tokenKey)
+                prefs.remove(saltKey)
+            } else {
+                prefs[tokenKey] = CryptoManager.encrypt(token)
+                prefs[saltKey] = CryptoManager.encrypt(salt)
+            }
+        }
+    }
 
     // salt
     val saltFlow: Flow<String?> =
         encryptedFlow(PrefKeys.SALT) { it }
 
+    @Deprecated(
+        message = "use setToken(token, salt) instead",
+        replaceWith = ReplaceWith("setToken(token, salt)")
+    )
     suspend fun setSalt(value: String?) =
         setEncrypted(PrefKeys.SALT, value) { it }
 
@@ -228,48 +248,6 @@ object Preferences {
         App.getContext().getSharedPreferences("general_settings", Context.MODE_PRIVATE)
     }
 
-
-    // ---------------------- 旧 EncryptedSharedPreferences → DataStore 迁移 ----------------------
-
-    /**
-     * 一次性迁移旧的 EncryptedSharedPreferences 中的敏感数据到 DataStore。
-     * 建议在 App.onCreate() 中用协程调用：
-     *
-     *   lifecycleScope.launch {
-     *       Preferences.migrateOldEncryptedPrefs(App.getContext())
-     *   }
-     */
-    suspend fun migrateOldEncryptedPrefs(context: Context) = withContext(Dispatchers.IO) {
-        // 旧的 EncryptedSharedPreferences（已弃用，仅用于读取旧数据）
-        val masterKey = MasterKey.Builder(context)
-            .setKeyScheme(MasterKey.KeyScheme.AES256_GCM)
-            .build()
-
-        val oldEncryptedPrefs = EncryptedSharedPreferences.create(
-            context,
-            "secret_shared_prefs",
-            masterKey,
-            EncryptedSharedPreferences.PrefKeyEncryptionScheme.AES256_SIV,
-            EncryptedSharedPreferences.PrefValueEncryptionScheme.AES256_GCM
-        )
-
-        val password = oldEncryptedPrefs.getString(PrefKeys.PASSWORD, null)
-        val token = oldEncryptedPrefs.getString(PrefKeys.TOKEN, null)
-        val salt = oldEncryptedPrefs.getString(PrefKeys.SALT, null)
-        val nav = oldEncryptedPrefs.getString(PrefKeys.NAVIDROME_TOKEN, null)
-
-        if (password == null && token == null && salt == null && nav == null) {
-            return@withContext
-        }
-
-        SecurePrefs.setPassword(password)
-        SecurePrefs.setToken(token)
-        SecurePrefs.setSalt(salt)
-        SecurePrefs.setNavidromeToken(nav)
-
-        oldEncryptedPrefs.edit { clear() }
-    }
-
     // ---------------------- 新的敏感数据 API（基于 DataStore） ----------------------
     val isLoggedInFlow: Flow<Boolean> =
         combine(
@@ -283,10 +261,6 @@ object Preferences {
 
     @JvmStatic
     fun passwordFlow(): Flow<String?> = SecurePrefs.passwordFlow
-
-    fun getPassword(): String{
-        return ""
-    }
 
     @OptIn(DelicateCoroutinesApi::class)
     @JvmStatic
@@ -303,18 +277,21 @@ object Preferences {
     @OptIn(DelicateCoroutinesApi::class)
     fun setToken(token: String, salt: String) {
         kotlinx.coroutines.GlobalScope.launch(kotlinx.coroutines.Dispatchers.IO) {
-            SecurePrefs.setToken(token)
-            SecurePrefs.setSalt(salt)
+            SecurePrefs.setToken(token,salt)
         }
+    }
+
+    suspend fun updateToken(token: String, salt: String){
+
     }
 
     @JvmStatic
     @OptIn(DelicateCoroutinesApi::class)
     fun clearLogin(){
+        setUser(null) // 直接影响Subsonic接口。
         kotlinx.coroutines.GlobalScope.launch(kotlinx.coroutines.Dispatchers.IO) {
-            SecurePrefs.setToken(null)
-            SecurePrefs.setSalt(null)
             SecurePrefs.setPassword(null)
+            SecurePrefs.setToken(null, null)
             SecurePrefs.setNavidromeToken(null)
         }
     }
