@@ -122,8 +122,7 @@ public class LoginFragment extends Fragment implements ClickCallback {
         assert server != null;
         saveServerPreference(server.getServerId(), server.getAddress(), server.getLocalAddress(), server.getUsername(), server.getPassword(), server.isLowSecurity());
 
-        SystemRepository systemRepository = new SystemRepository();
-        systemRepository.checkUserCredentialJava(new SystemCallback() {
+        SystemRepository.INSTANCE.checkUserCredentialJava(new SystemCallback() {
             @Override
             public void onError(Exception exception) {
                 Preferences.switchInUseServerAddress();
@@ -136,6 +135,7 @@ public class LoginFragment extends Fragment implements ClickCallback {
                 activity.goFromLogin();
             }
         });
+
     }
 
     @Override
@@ -152,7 +152,7 @@ public class LoginFragment extends Fragment implements ClickCallback {
         Preferences.setUser(user);
         Preferences.setPassword(password);
         Preferences.setLowSecurity(isLowSecurity);
-
+//        SystemRepository.INSTANCE.updateOpenSubsonicExtensions();
     }
 
     private void resetServerPreference() {

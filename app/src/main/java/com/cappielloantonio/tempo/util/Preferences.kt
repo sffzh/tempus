@@ -19,6 +19,7 @@ import com.google.crypto.tink.internal.RegistryConfiguration
 import com.google.gson.Gson
 import kotlinx.coroutines.DelicateCoroutinesApi
 import kotlinx.coroutines.flow.Flow
+import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.map
 import kotlinx.coroutines.launch
@@ -170,6 +171,7 @@ private object PrefKeys {
     const val SERVER_ID = "server_id"
     const val OPEN_SUBSONIC = "open_subsonic"
     const val OPEN_SUBSONIC_EXTENSIONS = "open_subsonic_extensions"
+    const val OPEN_SUBSONIC_EXTENSIONS_INITIALIZED = "OPEN_SUBSONIC_EXTENSIONS_INITIALIZED"
     const val LOCAL_ADDRESS = "local_address"
     const val IN_USE_SERVER_ADDRESS = "in_use_server_address"
     const val NEXT_SERVER_SWITCH = "next_server_switch"
@@ -240,6 +242,7 @@ private object PrefKeys {
 }
 
 object Preferences {
+    const val TAG = "Preferences"
 
     const val THEME_KEY = PrefKeys.THEME
 
@@ -401,12 +404,25 @@ object Preferences {
         generalPrefs.edit { putBoolean(PrefKeys.OPEN_SUBSONIC, isOpenSubsonic) }
     }
 
-    @JvmStatic
     fun getOpenSubsonicExtensions(): String? {
         return generalPrefs.getString(PrefKeys.OPEN_SUBSONIC_EXTENSIONS, null)
     }
 
-    @JvmStatic
+    fun isOpenSubsonicExtensionsInitialized(): Boolean {
+        return generalPrefs.getBoolean(PrefKeys.OPEN_SUBSONIC_EXTENSIONS_INITIALIZED, false);
+    }
+
+    private val _openSubsonicExtensionsInitializedFlow = MutableStateFlow<Boolean>(false)
+    val openSubsonicExtensionsInitializedFlow: Flow<Boolean> = _openSubsonicExtensionsInitializedFlow
+
+    fun markOpenSubsonicExtensionsInitialized(boolean: Boolean){
+        generalPrefs.edit {
+            Log.d(TAG, "markOpenSubsonicExtensionsInitialized: $boolean")
+            putBoolean(PrefKeys.OPEN_SUBSONIC_EXTENSIONS_INITIALIZED, boolean)
+            _openSubsonicExtensionsInitializedFlow.value = boolean
+        }
+    }
+
     fun setOpenSubsonicExtensions(extension: List<OpenSubsonicExtension>) {
         generalPrefs.edit { putString(PrefKeys.OPEN_SUBSONIC_EXTENSIONS, Gson().toJson(extension)) }
     }

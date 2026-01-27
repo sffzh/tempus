@@ -18,12 +18,8 @@ public class MainViewModel extends AndroidViewModel {
 
     private static final String TAG = "MainViewModel";
 
-    private final SystemRepository systemRepository;
-
     public MainViewModel(@NonNull Application application) {
         super(application);
-
-        systemRepository = new SystemRepository();
     }
 
     public boolean isQueueLoaded() {
@@ -32,14 +28,10 @@ public class MainViewModel extends AndroidViewModel {
     }
 
     public LiveData<SubsonicResponse> ping() {
-        return systemRepository.ping();
-    }
-
-    public LiveData<List<OpenSubsonicExtension>> getOpenSubsonicExtensions() {
-        return systemRepository.getOpenSubsonicExtensions();
+        return SystemRepository.INSTANCE.ping();
     }
 
     public LiveData<LatestRelease> checkTempoUpdate() {
-        return systemRepository.checkTempoUpdate();
+        return SystemRepository.INSTANCE.checkTempoUpdate();
     }
 }

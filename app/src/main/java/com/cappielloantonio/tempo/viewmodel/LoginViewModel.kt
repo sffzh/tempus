@@ -57,7 +57,7 @@ class LoginViewModel : ViewModel() {
         }
     }
 
-    val serverList: LiveData<kotlin.collections.List<Server?>?>? = serverRepository.liveServer;
+    val serverList: LiveData<kotlin.collections.List<Server?>> = serverRepository.liveServer;
 
     fun addServer(server: Server) {
         serverRepository.insert(server);

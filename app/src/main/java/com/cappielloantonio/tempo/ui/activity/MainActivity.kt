@@ -61,8 +61,6 @@ class MainActivity : BaseActivity() {
         loginNavigator.handleInitialLoginState()
         assetLinkHandler.handleIntent(intent)
 
-        observeOpenSubsonicExtensions()
-
         onBackPressedDispatcher.addCallback(this) {
             if (bottomSheetController.behavior.state ==
                 com.google.android.material.bottomsheet.BottomSheetBehavior.STATE_EXPANDED
@@ -106,14 +104,5 @@ class MainActivity : BaseActivity() {
     fun setBottomSheetDraggableState(draggable: Boolean) = bottomSheetController.setDraggable(draggable)
     fun collapseBottomSheetDelayed() = bottomSheetController.collapseDelayed()
 
-    private fun observeOpenSubsonicExtensions() {
-    if (Preferences.isLogged()) {
-        mainViewModel.openSubsonicExtensions.observe(this) { openSubsonicExtensions ->
-            if (openSubsonicExtensions != null) {
-                Preferences.setOpenSubsonicExtensions(openSubsonicExtensions)
-            }
-        }
-    }
-}
 }
 

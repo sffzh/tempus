@@ -3,6 +3,7 @@ package com.cappielloantonio.tempo.subsonic.api.system;
 import android.util.Log;
 
 import com.cappielloantonio.tempo.subsonic.RetrofitClient;
+import com.cappielloantonio.tempo.subsonic.RetrofitManager;
 import com.cappielloantonio.tempo.subsonic.Subsonic;
 import com.cappielloantonio.tempo.subsonic.base.ApiResponse;
 import com.cappielloantonio.tempo.util.Preferences;
@@ -19,7 +20,7 @@ public class SystemClient {
 
     public SystemClient(Subsonic subsonic) {
         this.subsonic = subsonic;
-        this.systemService = new RetrofitClient(subsonic).getRetrofit().create(SystemService.class);
+        this.systemService = RetrofitManager.createService(subsonic.getUrl(), SystemService.class);
     }
 
     public Call<ApiResponse> ping() {

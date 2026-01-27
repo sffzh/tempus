@@ -179,7 +179,13 @@ public class PlayerBottomSheetViewModel extends AndroidViewModel {
             return;
         }
 
-        if (OpenSubsonicExtensionsUtil.isSongLyricsExtensionAvailable()) {
+        Log.d(TAG, "Refreshing media info ended: "+OpenSubsonicExtensionsUtil.INSTANCE.isOpenSubsonicExtensionsInitialized());
+
+        if (!OpenSubsonicExtensionsUtil.INSTANCE.isOpenSubsonicExtensionsInitialized()){
+            OpenSubsonicExtensionsUtil.INSTANCE.waitOpenSubsonicExtensionsInit(()-> refreshMediaInfo(owner, media));
+        }
+
+        if (OpenSubsonicExtensionsUtil.INSTANCE.isSongLyricsExtensionAvailable()) {
             openRepository.getLyricsBySongId(media.getId()).observe(owner, lyricsList -> {
                 lyricsListLiveData.postValue(lyricsList);
                 lyricsLiveData.postValue(null);

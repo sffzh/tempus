@@ -22,13 +22,16 @@ import com.cappielloantonio.tempo.ui.fragment.model.BilingualLine
 import kotlin.math.max
 import kotlin.math.min
 
-const val TAG: String = "LyricView"
 
 class LyricView @JvmOverloads constructor(
     context: Context,
     attrs: AttributeSet? = null,
     defStyleAttr: Int = 0
 ) : View(context, attrs, defStyleAttr) {
+
+    companion object{
+        const val TAG: String = "LyricView"
+    }
 
     // 歌词数据
     private var lyrics: List<BilingualLine> = emptyList()

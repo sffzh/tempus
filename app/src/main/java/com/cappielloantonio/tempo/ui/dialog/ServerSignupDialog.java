@@ -45,7 +45,9 @@ public class ServerSignupDialog extends DialogFragment {
 
         loginViewModel = new ViewModelProvider(requireActivity()).get(LoginViewModel.class);
 
-        return new MaterialAlertDialogBuilder(getActivity())
+        setCancelable(false);//屏蔽外部点击和返回键关键对话框
+
+        return new MaterialAlertDialogBuilder(requireActivity())
                 .setView(bind.getRoot())
                 .setTitle(R.string.server_signup_dialog_title)
                 .setNeutralButton(R.string.server_signup_dialog_neutral_button, (dialog, id) -> { })

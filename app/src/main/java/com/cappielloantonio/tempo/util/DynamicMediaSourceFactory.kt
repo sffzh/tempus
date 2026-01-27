@@ -50,7 +50,7 @@ class DynamicMediaSourceFactory(
 
                 val uri = mediaItem.localConfiguration?.uri
                 val isTranscoding = uri?.getQueryParameter("maxBitRate") != null || 
-                                   (uri?.getQueryParameter("format") != null && uri?.getQueryParameter("format") != "raw")
+                                   (uri?.getQueryParameter("format") != null && uri.getQueryParameter("format") != "raw")
                 
                 if (isTranscoding && OpenSubsonicExtensionsUtil.isTranscodeOffsetExtensionAvailable()) {
                      TranscodingMediaSource(mediaItem, dataSourceFactory, progressiveFactory)
