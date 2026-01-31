@@ -250,7 +250,7 @@ class LyricView @JvmOverloads constructor(
         val newHeights = IntArray(newLayouts.size)
         var sum = 0
         for (i in newLayouts.indices) {
-            newHeights[i] = sum + (newLayouts[i].hightlightHeight/2f).toInt()
+            newHeights[i] = sum + (newLayouts[i].primaryBaselineOffset).toInt()
             sum += newLayouts[i].height
         }
 
